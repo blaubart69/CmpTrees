@@ -6,11 +6,12 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{36C920CD-5B5D-4163-941B-3EE930C8518F}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>nCmpTree</RootNamespace>
-    <AssemblyName>nCmpTree</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <RootNamespace>CmpTrees</RootNamespace>
+    <AssemblyName>CmpTrees</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -34,19 +35,25 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CmpDirs.cs" />
+    <Compile Include="CmpDirsParallel.cs" />
+    <Compile Include="EnumDir.cs" />
+    <Compile Include="Options.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Spi\Data\Delta.cs" />
+    <Compile Include="Spi\Long.cs" />
+    <Compile Include="Spi\Misc.cs" />
+    <Compile Include="Spi\Native\Privilegien.cs" />
+    <Compile Include="Spi\Native\SafeFindHandle.cs" />
+    <Compile Include="Spi\Native\Win32.cs" />
+    <Compile Include="Spi\StatusLineWriter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
