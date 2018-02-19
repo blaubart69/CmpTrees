@@ -17,31 +17,33 @@ namespace Spi.Data
             IEnumerable<T> ListB,
             Func<T, T, int> KeyComparer,
             Func<T, T, int> AttributeComparer,
-            Action<DIFF_STATE, T, T> OnCompared)
+            Action<DIFF_STATE, T, T> OnCompared,
+            bool checkSortOrder)
         {
             return
                 _internal_DiffSortedEnumerables<T, T, T, object>(ListA, ListB,
                 item => item, KeyComparer,
                 item => item, AttributeComparer,
                 (state, a, b, ctx) => OnCompared(state, a, b), 
-                checkSortOrder: false,
+                checkSortOrder,
                 context: null);
         }
 
-        public static uint DiffSortedEnumerablesCheckSortorder<T,K,A>(
+        public static uint DiffSortedEnumerables<T,K,A>(
             IEnumerable<T>              ListA,
             IEnumerable<T>              ListB,
             Func<T, K>                  KeySelector,
             Func<K,K,int>               KeyComparer,
             Func<T, A>                  AttributeSelector,
             Func<A,A,int>               AttributeComparer,
-            Action<DIFF_STATE, T, T>    OnCompared)
+            Action<DIFF_STATE, T, T>    OnCompared,
+            bool                        checkSortorder)
         {
             return
                 _internal_DiffSortedEnumerables<T, K, A, object>(
                     ListA, ListB, KeySelector, KeyComparer, AttributeSelector, AttributeComparer,
                     (state, a, b, ctx) => OnCompared(state, a, b), 
-                    true,
+                    checkSortorder,
                     null);
         }
         private static uint _internal_DiffSortedEnumerables<T, K, A, C> (
@@ -162,7 +164,7 @@ namespace Spi.Data
         {
             if (KeyComparer(lastKey, currentKey) > 0)
             {
-                throw new InvalidOperationException(
+                throw new ApplicationException(
                     String.Format(
                         "Sortorder not given in list [{0}]. Last item is greater than current item. Last [{1}] > [{2}] (current)",
                         WhichList,

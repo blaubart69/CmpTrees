@@ -18,13 +18,13 @@ namespace CmpTrees
                 if (SearchHandle.IsInvalid)
                 {
                     int LastWinError = Marshal.GetLastWin32Error();
-                    if (LastWinError == Win32.ERROR_PATH_NOT_FOUND)
+                    if (LastWinError == Win32.ERROR_PATH_NOT_FOUND || LastWinError == Win32.ERROR_DIRECTORY)
                     {
                         yield break;
                     }
                     else
                     {
-                        errorHandler?.Invoke(LastWinError, FullDirname);
+                        errorHandler?.Invoke(LastWinError, "FindFirstFile, " + FullDirname);
                     }
                 }
                 else

@@ -6,6 +6,7 @@ using System.Threading;
 
 using Spi.Native;
 using Spi.Data;
+using System.Globalization;
 
 namespace CmpTrees
 {
@@ -13,12 +14,13 @@ namespace CmpTrees
     {
         public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.WIN32_FIND_DATA, Win32.WIN32_FIND_DATA> DiffCallback, ErrorHandler errorHandler, ManualResetEvent Cancel)
         {
-            IEnumerable<Win32.WIN32_FIND_DATA> itemsA = EnumDir.Entries(dira, errorHandler, Cancel);
-            IEnumerable<Win32.WIN32_FIND_DATA> itemsB = EnumDir.Entries(dirb, errorHandler, Cancel);
+            IEnumerable<Win32.WIN32_FIND_DATA> itemsA = EnumDir.Entries(dira, errorHandler, Cancel).OrderBy(i => i.cFileName, StringComparer.Ordinal);
+            IEnumerable<Win32.WIN32_FIND_DATA> itemsB = EnumDir.Entries(dirb, errorHandler, Cancel).OrderBy(i => i.cFileName, StringComparer.Ordinal);
 
             Spi.Data.Diff.DiffSortedEnumerables(
                 ListA: itemsA,
                 ListB: itemsB,
+                checkSortOrder: true,
                 KeyComparer: (a,b) =>
                 {
                     int cmp = String.CompareOrdinal(a.cFileName, b.cFileName);
