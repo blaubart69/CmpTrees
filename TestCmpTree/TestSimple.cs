@@ -61,9 +61,9 @@ namespace TestnCmpTree
             File.WriteAllText(          Path.Combine(dirb, "x"), "content");
 
             var result = RunCmp(dira, dirb);
-            Assert.AreEqual(2, result.Count);
+            Assert.AreEqual(1, result.Count);
 
-            Assert.IsTrue(result.Any(r => r.state == DIFF_STATE.DELETE && r.a.cFileName.Equals("x") &&  Misc.IsDirectoryFlagSet(r.a.dwFileAttributes)));
+            //Assert.IsTrue(result.Any(r => r.state == DIFF_STATE.DELETE && r.a.cFileName.Equals("x") &&  Misc.IsDirectoryFlagSet(r.a.dwFileAttributes)));
             Assert.IsTrue(result.Any(r => r.state == DIFF_STATE.NEW    && r.b.cFileName.Equals("x") && !Misc.IsDirectoryFlagSet(r.b.dwFileAttributes)));
         }
         [TestMethod]
@@ -93,9 +93,9 @@ namespace TestnCmpTree
             File.Copy(srcFilename, trgFilename);
 
             var result = RunCmp(dira, dirb);
-            Assert.AreEqual(2, result.Count);
+            Assert.AreEqual(1, result.Count);
             Assert.IsTrue(result.Where(i => !Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("x")));
-            Assert.IsTrue(result.Where(i =>  Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("subdir")));
+            //Assert.IsTrue(result.Where(i =>  Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("subdir")));
         }
         // --------------------------------------------------------------------
         IList<DiffData> RunCmp(string dira, string dirb)
@@ -111,7 +111,8 @@ namespace TestnCmpTree
                 },
                 errorHandler = (rc, msg) => { error = true; },
                 followJunctions = false,
-                maxDepth = -1
+                maxDepth = -1,
+                
             };
             var isFinished = new ManualResetEvent(false);
 

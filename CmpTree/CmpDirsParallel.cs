@@ -110,14 +110,16 @@ namespace CmpTrees
                 CmpDirs.Run(FullA, FullB,
                     (DIFF_STATE diffstate, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b) =>
                     {
-                        GetDirToEnum(diffstate, find_data_a, find_data_b, out string newDirToEnum, out uint attrs);
+                        GetDirToEnum(diffstate, ref find_data_a, ref find_data_b, out string newDirToEnum, out uint attrs);
 
                         if (newDirToEnum != null && WalkIntoDir(attrs, _opts.followJunctions, ctx.depth, _opts.maxDepth))
                         {
                             QueueOneDirForCompare(ctx.dirToSearchSinceRootDir == null ? newDirToEnum : Path.Combine(ctx.dirToSearchSinceRootDir, newDirToEnum), ctx.depth);
                         }
-
-                        _opts.diffHandler(diffstate, ctx.dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
+                        else
+                        {
+                            _opts.diffHandler(diffstate, ctx.dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
+                        }
                     },
                     _opts.errorHandler,
                     _CtrlCEvent);
@@ -142,7 +144,7 @@ namespace CmpTrees
             }
         }
 
-        private static void  GetDirToEnum(DIFF_STATE state, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
+        private static void  GetDirToEnum(DIFF_STATE state, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
         {
             newDirToEnum = null;
             attrs = 0;
