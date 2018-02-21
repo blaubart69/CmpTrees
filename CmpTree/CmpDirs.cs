@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 
 using Spi.Native;
 using Spi.Data;
-using System.Globalization;
+using Spi;
 
 namespace CmpTrees
 {
+    //public delegate void DiffCallbackHandler(DIFF_STATE state, ref Win32.WIN32_FIND_DATA a, ref Win32.WIN32_FIND_DATA b);
     class CmpDirs
     {
         public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.WIN32_FIND_DATA, Win32.WIN32_FIND_DATA> DiffCallback, ErrorHandler errorHandler, ManualResetEvent Cancel)
@@ -35,6 +35,10 @@ namespace CmpTrees
                 },
                 AttributeComparer: (a,b) =>
                 {
+                    if ( Misc.IsDirectoryFlagSet(a) && Misc.IsDirectoryFlagSet(b) )
+                    {
+                        return 0;
+                    }
                     long cmp;
                     if ((cmp = CmpDirs.CmpFileTimes(a.ftLastWriteTime, b.ftLastWriteTime)) != 0)
                     {

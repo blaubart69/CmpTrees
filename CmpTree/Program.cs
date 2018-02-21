@@ -57,25 +57,15 @@ namespace CmpTrees
                 ThreadPool.SetMaxThreads(64, 1);
 
 
-                DiffHandler diff = (DIFF_STATE state, string basedir, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b) =>
+                DiffHandler diff = (DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b) =>
                 {
                     if ( state == DIFF_STATE.SAMESAME )
                     {
                         return;
                     }
                     string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
-                    if ( state == DIFF_STATE.NEW )
-                    {
-                        Console.Out.WriteLine($"+ {baseDirToPrint}{find_data_b.cFileName}");
-                    }
-                    else if ( state == DIFF_STATE.DELETE )
-                    {
-                        Console.Out.WriteLine($"- {baseDirToPrint}{find_data_a.cFileName}");
-                    }
-                    else
-                    {
-                        Console.Out.WriteLine($"# {baseDirToPrint}{find_data_a.cFileName}");
-                    }
+                    string filenameToPrint = ( state == DIFF_STATE.NEW ) ? find_data_b.cFileName : find_data_a.cFileName;
+                    Console.Out.WriteLine($"{GetDiffPrefix(state)} {baseDirToPrint}{filenameToPrint}");
                 };
 
                 var enumOpts = new EnumOptions()
@@ -104,6 +94,19 @@ namespace CmpTrees
             return 0;
 
         }
+
+        private static string GetDiffPrefix(DIFF_STATE state)
+        {
+            switch (state)
+            {
+                case DIFF_STATE.NEW: return "+";
+                case DIFF_STATE.DELETE: return "-";
+                case DIFF_STATE.MODIFY: return "%";
+                case DIFF_STATE.SAMESAME: return "S";
+            }
+            throw new Exception($"wrong state [{state.ToString()}]");
+        }
+
         static void ShowHelp(Mono.Options.OptionSet p)
         {
             Console.WriteLine("Usage: CmpTrees [OPTIONS] {DirectoryA} {DirectoryB}");

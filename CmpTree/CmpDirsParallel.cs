@@ -9,7 +9,7 @@ using Spi.Data;
 namespace CmpTrees
 {
     public delegate void ErrorHandler(int RetCode, string Message);
-    public delegate void DiffHandler(DIFF_STATE state, string basedir, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b);
+    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b);
     
     class ParallelCtx
     {
@@ -110,30 +110,14 @@ namespace CmpTrees
                 CmpDirs.Run(FullA, FullB,
                     (DIFF_STATE diffstate, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b) =>
                     {
-                        string newDirToEnum = null;
-                        uint attrs = 0;
-                        if ( diffstate == DIFF_STATE.NEW && Spi.Misc.IsDirectoryFlagSet(find_data_b) )
-                        {
-                            newDirToEnum = find_data_b.cFileName;
-                            attrs = find_data_b.dwFileAttributes;
-                        }
-                        else if ( diffstate == DIFF_STATE.DELETE && Spi.Misc.IsDirectoryFlagSet(find_data_a) )
-                        {
-                            newDirToEnum = find_data_a.cFileName;
-                            attrs = find_data_a.dwFileAttributes;
-                        }
-                        else if ( Spi.Misc.IsDirectoryFlagSet(find_data_a) )
-                        {
-                            newDirToEnum = find_data_a.cFileName;
-                            attrs = find_data_a.dwFileAttributes;
-                        }
+                        GetDirToEnum(diffstate, find_data_a, find_data_b, out string newDirToEnum, out uint attrs);
 
                         if (newDirToEnum != null && WalkIntoDir(attrs, _opts.followJunctions, ctx.depth, _opts.maxDepth))
                         {
                             QueueOneDirForCompare(ctx.dirToSearchSinceRootDir == null ? newDirToEnum : Path.Combine(ctx.dirToSearchSinceRootDir, newDirToEnum), ctx.depth);
                         }
 
-                        _opts.diffHandler(diffstate, ctx.dirToSearchSinceRootDir, find_data_a, find_data_b);
+                        _opts.diffHandler(diffstate, ctx.dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
                     },
                     _opts.errorHandler,
                     _CtrlCEvent);
@@ -157,6 +141,23 @@ namespace CmpTrees
                 DecrementEnumerationQueueCountAndSetFinishedIfZero();
             }
         }
+
+        private static void  GetDirToEnum(DIFF_STATE state, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
+        {
+            newDirToEnum = null;
+            attrs = 0;
+            if (state == DIFF_STATE.NEW && Spi.Misc.IsDirectoryFlagSet(find_data_b))
+            {
+                newDirToEnum    = find_data_b.cFileName;
+                attrs           = find_data_b.dwFileAttributes;
+            }
+            else if (Spi.Misc.IsDirectoryFlagSet(find_data_a))
+            {
+                newDirToEnum    = find_data_a.cFileName;
+                attrs           = find_data_a.dwFileAttributes;
+            }
+        }
+
         private static string BuildFullDirName(string RootDir, string dir)
         {
             string dirToEnumerate;
