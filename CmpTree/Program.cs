@@ -1,9 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
 
+using Spi;
 using Spi.Native;
 using Spi.Data;
 
@@ -27,6 +30,7 @@ namespace CmpTrees
     }
     class Program
     {
+        static readonly string ErrFilename = Path.Combine(Environment.GetEnvironmentVariable("temp"), "cmptree.err.txt");
         static int Main(string[] args)
         {
             Opts opts;
@@ -38,50 +42,76 @@ namespace CmpTrees
             try
             {
                 ManualResetEvent CrtlCEvent = new ManualResetEvent(false);
-                
-
                 new Thread(new ThreadStart(() =>
                 {
                     while (true)
                     {
                         if (Console.ReadKey().KeyChar == 'q')
                         {
-                            Console.Error.WriteLine("going down...");
+                            Console.Error.WriteLine("\ngoing down...\n");
                             CrtlCEvent.Set();
                             break;
                         }
                     }
-                }))
-                { IsBackground = true }.Start();
+                })){ IsBackground = true }.Start();
 
                 ThreadPool.SetMaxThreads(64, 1);
 
-
-                DiffHandler diff = (DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b) =>
+                using (var errWriter        = new ConsoleAndFileWriter(Console.Error, ErrFilename))
+                using (TextWriter newWriter = TextWriter.Synchronized(new StreamWriter(@".\new.txt", append: false, encoding: Encoding.UTF8)))
+                using (TextWriter modWriter = TextWriter.Synchronized(new StreamWriter(@".\mod.txt", append: false, encoding: Encoding.UTF8)))
+                using (TextWriter delWriter = TextWriter.Synchronized(new StreamWriter(@".\del.txt", append: false, encoding: Encoding.UTF8)))
                 {
-                    if ( state == DIFF_STATE.SAMESAME )
+                    Stats stats = new Stats();
+                    DiffHandler diff = (DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b) =>
                     {
-                        return;
+                        if (state == DIFF_STATE.SAMESAME)
+                        {
+                            return;
+                        }
+                        string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
+                        string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
+                        //Console.Out.WriteLine($"{GetDiffPrefix(state)} {baseDirToPrint}{filenameToPrint}");
+                        TextWriter toWriteTo;
+                        switch (state)
+                        {
+                            case DIFF_STATE.NEW:    toWriteTo = newWriter; Interlocked.Increment(ref stats.FilesNew); break;
+                            case DIFF_STATE.MODIFY: toWriteTo = modWriter; Interlocked.Increment(ref stats.FilesMod); break;
+                            case DIFF_STATE.DELETE: toWriteTo = delWriter; Interlocked.Increment(ref stats.FilesDel); break;
+                            default: throw new Exception($"internal error. no such writer for this kind of state. [{state.ToString()}]");
+                        }
+                        toWriteTo.WriteLine($"{baseDirToPrint}{filenameToPrint}");
+                    };
+
+                    var enumOpts = new EnumOptions()
+                    {
+                        diffHandler = diff,
+                        errorHandler = (int RetCode, string Message) => errWriter.WriteLine($"E: rc={RetCode} {Message}"),
+                        followJunctions = opts.FollowJunctions,
+                        maxDepth = opts.Depth
+                    };
+
+                    ManualResetEvent cmpFinished = new ManualResetEvent(false);
+
+                    CmpDirsParallel paraCmp = new CmpDirsParallel(opts.DirA, opts.DirB, enumOpts, CrtlCEvent, cmpFinished);
+                    paraCmp.Start();
+
+                    StatusLineWriter statWriter = new StatusLineWriter();
+                    while (!cmpFinished.WaitOne(2000))
+                    {
+                        Process currProc = System.Diagnostics.Process.GetCurrentProcess();
+                        paraCmp.GetCounter(out ulong queued, out ulong running);
+                        statWriter.WriteWithDots($"dirs queued/running: {queued}/{running}"
+                            + $" | new/mod/del: {stats.FilesNew}/{stats.FilesMod}/{stats.FilesDel}"
+                            + $" | GC.Total: {Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))}"
+                            + $" | PrivateMemory: {Misc.GetPrettyFilesize(currProc.PrivateMemorySize64)}"
+                            + $" | Threads: {currProc.Threads.Count}");
+
                     }
-                    string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
-                    string filenameToPrint = ( state == DIFF_STATE.NEW ) ? find_data_b.cFileName : find_data_a.cFileName;
-                    Console.Out.WriteLine($"{GetDiffPrefix(state)} {baseDirToPrint}{filenameToPrint}");
-                };
-
-                var enumOpts = new EnumOptions()
-                {
-                    diffHandler = diff,
-                    errorHandler = (int RetCode, string Message) => Console.Error.WriteLine($"E: rc={RetCode} {Message}"),
-                    followJunctions = opts.FollowJunctions,
-                    maxDepth = opts.Depth
-                };
-
-                ManualResetEvent cmpFinished = new ManualResetEvent(false);
-                var paraCmp = new CmpDirsParallel(opts.DirA, opts.DirB, enumOpts, CrtlCEvent, cmpFinished);
-                paraCmp.Start();
-                while ( ! cmpFinished.WaitOne(1000) )
-                {
-                    
+                    if (errWriter.hasDataWritten())
+                    {
+                        Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
+                    }
                 }
             }
             catch (Exception ex)
