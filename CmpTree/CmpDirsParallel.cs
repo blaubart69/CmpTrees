@@ -39,6 +39,8 @@ namespace CmpTrees
         readonly ManualResetEvent _CtrlCEvent;
         readonly ManualResetEvent _isFinished;
 
+        Semaphore _MaxEnumsRunning;
+
         long _EnumerationsQueued;
         long _EnumerationsRunning;
 
@@ -52,6 +54,15 @@ namespace CmpTrees
         }
         public void Start()
         {
+            Start(-1);
+        }
+        public void Start(int MaxEnumsRunning)
+        {
+            if (MaxEnumsRunning > 0)
+            {
+                _MaxEnumsRunning = new Semaphore(MaxEnumsRunning, MaxEnumsRunning);
+            }
+
             if (_EnumerationsRunning != 0)
             {
                 throw new Exception("CmpDirsParallel is already running");
@@ -100,6 +111,7 @@ namespace CmpTrees
         {
             try
             {
+                _MaxEnumsRunning?.WaitOne();
                 Interlocked.Increment(ref _EnumerationsRunning);
 
                 ParallelCtx ctx = (ParallelCtx)state;
@@ -139,6 +151,7 @@ namespace CmpTrees
             }
             finally
             {
+                _MaxEnumsRunning?.Release();
                 Interlocked.Decrement(ref _EnumerationsRunning);
                 DecrementEnumerationQueueCountAndSetFinishedIfZero();
             }

@@ -27,6 +27,7 @@ namespace CmpTrees
         public bool progress;
         public bool FollowJunctions = false;
         public int Depth = -1;
+        public int MaxThreads = -1;
     }
     class Program
     {
@@ -94,7 +95,7 @@ namespace CmpTrees
                     ManualResetEvent cmpFinished = new ManualResetEvent(false);
 
                     CmpDirsParallel paraCmp = new CmpDirsParallel(opts.DirA, opts.DirB, enumOpts, CrtlCEvent, cmpFinished);
-                    paraCmp.Start();
+                    paraCmp.Start(opts.MaxThreads);
 
                     StatusLineWriter statWriter = new StatusLineWriter();
                     while (!cmpFinished.WaitOne(2000))
@@ -153,6 +154,7 @@ namespace CmpTrees
                 { "p|progress", "prints out little statistics",             v => opts.progress = (v != null) },
                 { "d|depth=",   "max depth to go down",                     v => opts.Depth = Convert.ToInt32(v) },
                 { "j|follow",   "follow junctions",                         v => opts.FollowJunctions = (v != null) },
+                { "t|threads=",  "max enumeration threads parallel",         v => opts.MaxThreads = Convert.ToInt32(v) },
                 { "h|help",     "show this message and exit",               v => show_help = v != null }            };
 
             try
