@@ -93,5 +93,9 @@ namespace Spi
         {
             return IsDirectoryFlagSet(find_data.dwFileAttributes);
         }
+        public static ulong GetFilesize(Spi.Native.Win32.WIN32_FIND_DATA find_data)
+        {
+            return TwoUIntsToULong(find_data.nFileSizeHigh, find_data.nFileSizeLow);
+        }
     }
 }

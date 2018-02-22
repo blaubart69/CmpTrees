@@ -56,8 +56,6 @@ namespace CmpTrees
                     }
                 })){ IsBackground = true }.Start();
 
-                ThreadPool.SetMaxThreads(64, 1);
-
                 using (var errWriter        = new ConsoleAndFileWriter(Console.Error, ErrFilename))
                 using (TextWriter newWriter = TextWriter.Synchronized(new StreamWriter(@".\new.txt", append: false, encoding: Encoding.UTF8)))
                 using (TextWriter modWriter = TextWriter.Synchronized(new StreamWriter(@".\mod.txt", append: false, encoding: Encoding.UTF8)))
@@ -162,7 +160,7 @@ namespace CmpTrees
                 { "p|progress", "prints out little statistics",             v => opts.progress = (v != null) },
                 { "d|depth=",   "max depth to go down",                     v => opts.Depth = Convert.ToInt32(v) },
                 { "j|follow",   "follow junctions",                         v => opts.FollowJunctions = (v != null) },
-                { "t|threads=",  "max enumeration threads parallel",         v => opts.MaxThreads = Convert.ToInt32(v) },
+                { "t|threads=",  "max enumeration threads parallel",        v => opts.MaxThreads = Convert.ToInt32(v) },
                 { "h|help",     "show this message and exit",               v => show_help = v != null }            };
 
             try
@@ -171,7 +169,7 @@ namespace CmpTrees
                 if ( dirs.Count != 2)
                 {
                     Console.Error.WriteLine("no two dir's given");
-                    return null;
+                    opts = null;
                 }
                 else
                 {
@@ -182,12 +180,12 @@ namespace CmpTrees
             catch (Mono.Options.OptionException oex)
             {
                 Console.WriteLine(oex.Message);
-                return null;
+                opts = null;
             }
             if (show_help)
             {
                 ShowHelp(p);
-                return null;
+                opts = null;
             }
             return opts;
         }

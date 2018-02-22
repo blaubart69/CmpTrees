@@ -45,6 +45,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Spi\ConsoleAndFileWriter.cs" />
     <Compile Include="Spi\Data\Delta.cs" />
+    <Compile Include="Spi\ListExtension.cs" />
     <Compile Include="Spi\Long.cs" />
     <Compile Include="Spi\Misc.cs" />
     <Compile Include="Spi\Native\Privilegien.cs" />

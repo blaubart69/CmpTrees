@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 
 using Spi.Native;
@@ -9,17 +8,35 @@ using Spi;
 
 namespace CmpTrees
 {
+    internal class Win32FinddataComparer : IComparer<Win32.WIN32_FIND_DATA>
+    {
+        public int Compare(Win32.WIN32_FIND_DATA a, Win32.WIN32_FIND_DATA b)
+        {
+            return String.CompareOrdinal(a.cFileName, b.cFileName);
+        }
+    }
+
     //public delegate void DiffCallbackHandler(DIFF_STATE state, ref Win32.WIN32_FIND_DATA a, ref Win32.WIN32_FIND_DATA b);
     class CmpDirs
     {
+        static Win32FinddataComparer finddataComparer = new Win32FinddataComparer();
+
         public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.WIN32_FIND_DATA, Win32.WIN32_FIND_DATA> DiffCallback, ErrorHandler errorHandler, ManualResetEvent Cancel)
         {
-            IEnumerable<Win32.WIN32_FIND_DATA> itemsA = EnumDir.Entries(dira, errorHandler, Cancel).OrderBy(i => i.cFileName, StringComparer.Ordinal);
-            IEnumerable<Win32.WIN32_FIND_DATA> itemsB = EnumDir.Entries(dirb, errorHandler, Cancel).OrderBy(i => i.cFileName, StringComparer.Ordinal);
+            CalcSortedDirectoryList(
+                EnumDir.Entries(dira, errorHandler, Cancel), 
+                EnumDir.Entries(dirb, errorHandler, Cancel), 
+                out List<Win32.WIN32_FIND_DATA> sortedItemsA, 
+                out List<Win32.WIN32_FIND_DATA> sortedItemsB);
+
+            if ( Cancel.WaitOne(0) )
+            {
+                return;
+            }
 
             Spi.Data.Diff.DiffSortedEnumerables(
-                ListA: itemsA,
-                ListB: itemsB,
+                ListA: sortedItemsA,
+                ListB: sortedItemsB,
                 checkSortOrder: true,
                 KeyComparer: (a,b) =>
                 {
@@ -44,6 +61,10 @@ namespace CmpTrees
                     {
                         return (int)cmp;
                     }
+                    if ((cmp = (long)(Misc.GetFilesize(a) - Misc.GetFilesize(b)) ) != 0)
+                    {
+                        return (int)cmp;
+                    }
 
                     return 0;
                 },
@@ -52,6 +73,48 @@ namespace CmpTrees
         public static long CmpFileTimes(System.Runtime.InteropServices.ComTypes.FILETIME a, System.Runtime.InteropServices.ComTypes.FILETIME b)
         {
             return Spi.Misc.FiletimeToLong(a) - Spi.Misc.FiletimeToLong(b);
+        }
+        private static void CalcSortedDirectoryList(IEnumerable<Win32.WIN32_FIND_DATA> entriesA, IEnumerable<Win32.WIN32_FIND_DATA> entriesB, out List<Win32.WIN32_FIND_DATA> sortedEntriesA, out List<Win32.WIN32_FIND_DATA> sortedEntriesB)
+        {
+            using (ManualResetEvent finishedA = new ManualResetEvent(false))
+            {
+                Exception sortAException = null;
+
+                List<Win32.WIN32_FIND_DATA> TMP_sortedEntriesA = null;
+                ThreadPool.QueueUserWorkItem((state) =>
+                {
+                    try
+                    {
+                        GetSortedDirectoryList(entriesA, out TMP_sortedEntriesA);
+                    }
+                    catch (Exception ex)
+                    {
+                        sortAException = ex;
+                    }
+                    finally
+                    {
+                        finishedA.Set();
+                    }
+                });
+
+                GetSortedDirectoryList(entriesB, out sortedEntriesB);
+                finishedA.WaitOne();
+
+                if (sortAException != null)
+                {
+                    throw sortAException;
+                }
+
+                sortedEntriesA = TMP_sortedEntriesA;
+            }
+        }
+        private static void GetSortedDirectoryList(IEnumerable<Win32.WIN32_FIND_DATA> entries, out List<Win32.WIN32_FIND_DATA> sortedEntries)
+        {
+            sortedEntries = new List<Win32.WIN32_FIND_DATA>();
+            foreach (Win32.WIN32_FIND_DATA finddata in entries )
+            {
+                Spi.ListExtension.AddSorted(sortedEntries, finddata, finddataComparer);
+            }
         }
     }
 }
