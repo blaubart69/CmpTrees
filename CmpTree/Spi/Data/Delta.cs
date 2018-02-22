@@ -22,8 +22,10 @@ namespace Spi.Data
         {
             return
                 _internal_DiffSortedEnumerables<T, T, T, object>(ListA, ListB,
-                item => item, KeyComparer,
-                item => item, AttributeComparer,
+                item => item, 
+                KeyComparer,
+                item => item, 
+                AttributeComparer,
                 (state, a, b, ctx) => OnCompared(state, a, b), 
                 checkSortOrder,
                 context: null);

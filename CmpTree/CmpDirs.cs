@@ -23,11 +23,15 @@ namespace CmpTrees
 
         public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.WIN32_FIND_DATA, Win32.WIN32_FIND_DATA> DiffCallback, ErrorHandler errorHandler, ManualResetEvent Cancel)
         {
+            /*
             CalcSortedDirectoryList(
                 EnumDir.Entries(dira, errorHandler, Cancel), 
                 EnumDir.Entries(dirb, errorHandler, Cancel), 
                 out List<Win32.WIN32_FIND_DATA> sortedItemsA, 
                 out List<Win32.WIN32_FIND_DATA> sortedItemsB);
+            */
+            IEnumerable<Win32.WIN32_FIND_DATA> sortedItemsA = EnumDir.Entries(dira, errorHandler, Cancel);
+            IEnumerable<Win32.WIN32_FIND_DATA> sortedItemsB = EnumDir.Entries(dirb, errorHandler, Cancel);
 
             if ( Cancel.WaitOne(0) )
             {
@@ -40,7 +44,7 @@ namespace CmpTrees
                 checkSortOrder: true,
                 KeyComparer: (a,b) =>
                 {
-                    int cmp = String.CompareOrdinal(a.cFileName, b.cFileName);
+                    int cmp = String.Compare(a.cFileName, b.cFileName, StringComparison.OrdinalIgnoreCase);
                     if ( cmp != 0 )
                     {
                         return cmp;
@@ -74,6 +78,7 @@ namespace CmpTrees
         {
             return Spi.Misc.FiletimeToLong(a) - Spi.Misc.FiletimeToLong(b);
         }
+        /*
         private static void CalcSortedDirectoryList(IEnumerable<Win32.WIN32_FIND_DATA> entriesA, IEnumerable<Win32.WIN32_FIND_DATA> entriesB, out List<Win32.WIN32_FIND_DATA> sortedEntriesA, out List<Win32.WIN32_FIND_DATA> sortedEntriesB)
         {
             using (ManualResetEvent finishedA = new ManualResetEvent(false))
@@ -116,5 +121,6 @@ namespace CmpTrees
                 Spi.ListExtension.AddSorted(sortedEntries, finddata, finddataComparer);
             }
         }
+        */
     }
 }
