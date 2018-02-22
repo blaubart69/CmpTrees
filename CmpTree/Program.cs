@@ -100,14 +100,22 @@ namespace CmpTrees
                     StatusLineWriter statWriter = new StatusLineWriter();
                     while (!cmpFinished.WaitOne(2000))
                     {
-                        Process currProc = System.Diagnostics.Process.GetCurrentProcess();
+                        Process currProc = null;
+                        try
+                        {
+                            currProc = System.Diagnostics.Process.GetCurrentProcess();
+                        }
+                        catch { }
+
+                        string privMem = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
+                        string threadcount = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
+
                         paraCmp.GetCounter(out ulong queued, out ulong running);
                         statWriter.WriteWithDots($"dirs queued/running: {queued}/{running}"
                             + $" | new/mod/del: {stats.FilesNew}/{stats.FilesMod}/{stats.FilesDel}"
                             + $" | GC.Total: {Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))}"
-                            + $" | PrivateMemory: {Misc.GetPrettyFilesize(currProc.PrivateMemorySize64)}"
-                            + $" | Threads: {currProc.Threads.Count}");
-
+                            + $" | PrivateMemory: {privMem}"
+                            + $" | Threads: {threadcount}");
                     }
                     if (errWriter.hasDataWritten())
                     {
