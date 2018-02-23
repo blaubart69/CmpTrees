@@ -8,18 +8,20 @@ using Spi;
 
 namespace CmpTrees
 {
+    /*
     internal class Win32FinddataComparer : IComparer<Win32.WIN32_FIND_DATA>
     {
         public int Compare(Win32.WIN32_FIND_DATA a, Win32.WIN32_FIND_DATA b)
         {
-            return String.CompareOrdinal(a.cFileName, b.cFileName);
+            return String.Compare(a.cFileName, b.cFileName, StringComparison.OrdinalIgnoreCase);
         }
     }
+    */
 
     //public delegate void DiffCallbackHandler(DIFF_STATE state, ref Win32.WIN32_FIND_DATA a, ref Win32.WIN32_FIND_DATA b);
     class CmpDirs
     {
-        static Win32FinddataComparer finddataComparer = new Win32FinddataComparer();
+        //static Win32FinddataComparer finddataComparer = new Win32FinddataComparer();
 
         public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.WIN32_FIND_DATA, Win32.WIN32_FIND_DATA> DiffCallback, ErrorHandler errorHandler, ManualResetEvent Cancel)
         {

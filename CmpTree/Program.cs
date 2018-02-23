@@ -56,6 +56,7 @@ namespace CmpTrees
                     }
                 })){ IsBackground = true }.Start();
 
+                DateTime start = DateTime.Now;
                 using (var errWriter        = new ConsoleAndFileWriter(Console.Error, ErrFilename))
                 using (TextWriter newWriter = TextWriter.Synchronized(new StreamWriter(@".\new.txt", append: false, encoding: Encoding.UTF8)))
                 using (TextWriter modWriter = TextWriter.Synchronized(new StreamWriter(@".\mod.txt", append: false, encoding: Encoding.UTF8)))
@@ -96,6 +97,7 @@ namespace CmpTrees
                     paraCmp.Start(opts.MaxThreads);
 
                     StatusLineWriter statWriter = new StatusLineWriter();
+                    ulong cmpsDone = 0;
                     while (!cmpFinished.WaitOne(2000))
                     {
                         Process currProc = null;
@@ -108,8 +110,8 @@ namespace CmpTrees
                         string privMem = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
                         string threadcount = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
-                        paraCmp.GetCounter(out ulong queued, out ulong running);
-                        statWriter.WriteWithDots($"dirs queued/running: {queued}/{running}"
+                        paraCmp.GetCounter(out ulong queued, out ulong running, out cmpsDone);
+                        statWriter.WriteWithDots($"dirs queued/running/done: {queued}/{running}/{cmpsDone}"
                             + $" | new/mod/del: {stats.FilesNew}/{stats.FilesMod}/{stats.FilesDel}"
                             + $" | GC.Total: {Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))}"
                             + $" | PrivateMemory: {privMem}"
@@ -119,6 +121,7 @@ namespace CmpTrees
                     {
                         Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
                     }
+                    WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), cmpsDone);
                 }
             }
             catch (Exception ex)
@@ -131,7 +134,19 @@ namespace CmpTrees
             return 0;
 
         }
-
+        private static void WriteStatistics(TimeSpan ProgramDuration, ulong comparesDone)
+        {
+            Console.Error.WriteLine();
+            Console.Error.WriteLine($"{comparesDone} dirs compared in {Spi.Misc.NiceDuration(ProgramDuration)}");
+            if (ProgramDuration.Ticks > 0)
+            {
+                double cmpsPerMilli = (double)comparesDone / (double)ProgramDuration.TotalMilliseconds;
+                Console.Error.WriteLine("{0:0.##} cmp/s | {1:0.##} cmp/m | {2:0.##} cmp/h",
+                    cmpsPerMilli * 1000,
+                    cmpsPerMilli * 1000 * 60,
+                    cmpsPerMilli * 1000 * 60 * 60);
+            }
+        }
         private static string GetDiffPrefix(DIFF_STATE state)
         {
             switch (state)
@@ -170,6 +185,7 @@ namespace CmpTrees
                 {
                     Console.Error.WriteLine("no two dir's given");
                     opts = null;
+                    show_help = true;
                 }
                 else
                 {

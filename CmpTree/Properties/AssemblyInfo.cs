@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("nCmpTree")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("CmpTrees")]
+[assembly: AssemblyDescription("Compare two directories and emmit files that have changed")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("nCmpTree")]
+[assembly: AssemblyProduct("CmpTrees")]
 [assembly: AssemblyCopyright("Copyright ©  2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

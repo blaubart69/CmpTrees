@@ -43,6 +43,7 @@ namespace CmpTrees
 
         long _EnumerationsQueued;
         long _EnumerationsRunning;
+        long _ComparesDone;
 
         public CmpDirsParallel(string dira, string dirb, EnumOptions opts, ManualResetEvent CtrlCEvent, ManualResetEvent isFinished)
         {
@@ -153,6 +154,7 @@ namespace CmpTrees
             {
                 _MaxEnumsRunning?.Release();
                 Interlocked.Decrement(ref _EnumerationsRunning);
+                Interlocked.Increment(ref _ComparesDone);
                 DecrementEnumerationQueueCountAndSetFinishedIfZero();
             }
         }
@@ -186,10 +188,11 @@ namespace CmpTrees
             }
             return dirToEnumerate;
         }
-        public void GetCounter(out ulong queued, out ulong running)
+        public void GetCounter(out ulong queued, out ulong running, out ulong done)
         {
             queued = (ulong)_EnumerationsQueued;
             running = (ulong)_EnumerationsRunning;
+            done = (ulong)_ComparesDone;
         }
         private static bool WalkIntoDir(uint dwFileAttributes, bool FollowJunctions, int currDepth, int maxDepth)
         {
