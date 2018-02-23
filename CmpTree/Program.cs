@@ -42,6 +42,15 @@ namespace CmpTrees
 
             try
             {
+                Spi.Native.PrivilegienStadl.TryToSetBackupPrivilege();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("could not set SE_BACKUP_PRIVILEGE");
+            }
+
+            try
+            {
                 ManualResetEvent CrtlCEvent = new ManualResetEvent(false);
                 new Thread(new ThreadStart(() =>
                 {
