@@ -53,6 +53,10 @@ namespace CmpTrees
             _CtrlCEvent = CtrlCEvent;
             _isFinished = isFinished;
         }
+        ~CmpDirsParallel()
+        {
+            _MaxEnumsRunning?.Close();
+        }
         public void Start()
         {
             Start(-1);
@@ -91,8 +95,6 @@ namespace CmpTrees
                     state:      new ParallelCtx(dirSinceRootDir, currDepth + 1)))
             {
                 Interlocked.Decrement(ref _EnumerationsQueued);
-
-                Console.Error.WriteLine("ThreadPool.QueueUserWorkItem returned false. STOP!");
                 throw new Exception("ThreadPool.QueueUserWorkItem returned false. STOP!");
             }
         }
@@ -159,7 +161,7 @@ namespace CmpTrees
             }
         }
 
-        private static void  GetDirToEnum(DIFF_STATE state, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
+        private static void GetDirToEnum(DIFF_STATE state, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
         {
             newDirToEnum = null;
             attrs = 0;

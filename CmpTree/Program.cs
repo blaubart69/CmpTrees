@@ -109,22 +109,7 @@ namespace CmpTrees
                     ulong cmpsDone = 0;
                     while (!cmpFinished.WaitOne(2000))
                     {
-                        Process currProc = null;
-                        try
-                        {
-                            currProc = System.Diagnostics.Process.GetCurrentProcess();
-                        }
-                        catch { }
-
-                        string privMem = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
-                        string threadcount = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
-
-                        paraCmp.GetCounter(out ulong queued, out ulong running, out cmpsDone);
-                        statWriter.WriteWithDots($"dirs queued/running/done: {queued}/{running}/{cmpsDone}"
-                            + $" | new/mod/del: {stats.FilesNew}/{stats.FilesMod}/{stats.FilesDel}"
-                            + $" | GC.Total: {Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))}"
-                            + $" | PrivateMemory: {privMem}"
-                            + $" | Threads: {threadcount}");
+                        cmpsDone = WriteProgress(stats, paraCmp, statWriter);
                     }
                     if (errWriter.hasDataWritten())
                     {
@@ -143,10 +128,32 @@ namespace CmpTrees
             return 0;
 
         }
+
+        private static ulong WriteProgress(Stats stats, CmpDirsParallel paraCmp, StatusLineWriter statWriter)
+        {
+            ulong cmpsDone;
+            Process currProc = null;
+            try
+            {
+                currProc = System.Diagnostics.Process.GetCurrentProcess();
+            }
+            catch { }
+
+            string privMem = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
+            string threadcount = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
+
+            paraCmp.GetCounter(out ulong queued, out ulong running, out cmpsDone);
+            statWriter.WriteWithDots($"dirs queued/running/done: {queued}/{running}/{cmpsDone}"
+                + $" | new/mod/del: {stats.FilesNew}/{stats.FilesMod}/{stats.FilesDel}"
+                + $" | GC.Total: {Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))}"
+                + $" | PrivateMemory: {privMem}"
+                + $" | Threads: {threadcount}");
+            return cmpsDone;
+        }
+
         private static void WriteStatistics(TimeSpan ProgramDuration, ulong comparesDone)
         {
-            Console.Error.WriteLine();
-            Console.Error.WriteLine($"{comparesDone} dirs compared in {Spi.Misc.NiceDuration(ProgramDuration)}");
+            Console.Error.WriteLine($"\n{comparesDone} dirs compared in {Spi.Misc.NiceDuration(ProgramDuration)}");
             if (ProgramDuration.Ticks > 0)
             {
                 double cmpsPerMilli = (double)comparesDone / (double)ProgramDuration.TotalMilliseconds;
