@@ -186,8 +186,9 @@ namespace CmpTrees
                     }
                     else
                     {
-                        _opts.diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
+                        
                     }
+                    _opts.diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
                 },
                 _opts.errorHandler,
                 _CtrlCEvent);
