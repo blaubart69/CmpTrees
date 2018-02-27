@@ -27,7 +27,7 @@ namespace CmpTrees
         public bool progress;
         public bool FollowJunctions = false;
         public int Depth = -1;
-        public int MaxThreads = -1;
+        public int MaxThreads = 32;
     }
     class Program
     {
@@ -102,7 +102,10 @@ namespace CmpTrees
 
                     ManualResetEvent cmpFinished = new ManualResetEvent(false);
 
-                    CmpDirsParallel paraCmp = new CmpDirsParallel(opts.DirA, opts.DirB, enumOpts, CrtlCEvent, cmpFinished);
+                    CmpDirsParallel paraCmp = new CmpDirsParallel(
+                        Spi.Long.GetLongFilenameNotation(opts.DirA),
+                        Spi.Long.GetLongFilenameNotation(opts.DirB), 
+                        enumOpts, CrtlCEvent, cmpFinished);
                     paraCmp.Start(opts.MaxThreads);
 
                     StatusLineWriter statWriter = new StatusLineWriter();
@@ -115,6 +118,7 @@ namespace CmpTrees
                     {
                         Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
                     }
+                    cmpsDone = WriteProgress(stats, paraCmp, statWriter);
                     WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), cmpsDone);
                 }
             }
