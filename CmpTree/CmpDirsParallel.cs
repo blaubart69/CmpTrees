@@ -39,7 +39,10 @@ namespace CmpTrees
         readonly ManualResetEvent _CtrlCEvent;
         readonly ManualResetEvent _isFinished;
 
-        Semaphore _MaxEnumsRunning;
+        readonly Queue<ParallelCtx> _workItems;
+
+        int _ThreadpoolUserItemsEnqueued;
+        int _maxThreads;
 
         long _EnumerationsQueued;
         long _EnumerationsRunning;
@@ -52,26 +55,19 @@ namespace CmpTrees
             _opts = opts;
             _CtrlCEvent = CtrlCEvent;
             _isFinished = isFinished;
-        }
-        ~CmpDirsParallel()
-        {
-            _MaxEnumsRunning?.Close();
+            _workItems = new Queue<ParallelCtx>();
         }
         public void Start()
         {
-            Start(-1);
+            Start(32);
         }
-        public void Start(int MaxEnumsRunning)
+        public void Start(int maxThreads)
         {
-            if (MaxEnumsRunning > 0)
-            {
-                _MaxEnumsRunning = new Semaphore(MaxEnumsRunning, MaxEnumsRunning);
-            }
-
             if (_EnumerationsRunning != 0)
             {
                 throw new Exception("CmpDirsParallel is already running");
             }
+            _maxThreads = maxThreads;
             _internal_Start();
         }
         private void _internal_Start()
@@ -90,6 +86,28 @@ namespace CmpTrees
         {
             Interlocked.Increment(ref _EnumerationsQueued);
 
+            bool startNewThread = false;
+            lock (_workItems)
+            {
+                _workItems.Enqueue(new ParallelCtx(dirSinceRootDir, currDepth + 1));
+
+                if ( _ThreadpoolUserItemsEnqueued < _maxThreads )
+                {
+                    startNewThread = true;
+                    Interlocked.Increment(ref _ThreadpoolUserItemsEnqueued);
+                }
+            }
+
+            if (startNewThread)
+            {
+                if (!ThreadPool.QueueUserWorkItem(
+                    callBack: new WaitCallback(ThreadCmpOneDirectory)))
+                {
+                    Interlocked.Decrement(ref _ThreadpoolUserItemsEnqueued);
+                    throw new Exception("ThreadPool.QueueUserWorkItem returned false. STOP!");
+                }
+            }
+            /*
             if (!ThreadPool.QueueUserWorkItem(
                     callBack:   new WaitCallback(ThreadCmpOneDirectory),
                     state:      new ParallelCtx(dirSinceRootDir, currDepth + 1)))
@@ -97,6 +115,7 @@ namespace CmpTrees
                 Interlocked.Decrement(ref _EnumerationsQueued);
                 throw new Exception("ThreadPool.QueueUserWorkItem returned false. STOP!");
             }
+            */
         }
         private void DecrementEnumerationQueueCountAndSetFinishedIfZero()
         {
@@ -114,30 +133,22 @@ namespace CmpTrees
         {
             try
             {
-                _MaxEnumsRunning?.WaitOne();
                 Interlocked.Increment(ref _EnumerationsRunning);
-
-                ParallelCtx ctx = (ParallelCtx)state;
-
-                string FullA = BuildFullDirName(_RootDirA, ctx.dirToSearchSinceRootDir);
-                string FullB = BuildFullDirName(_RootDirB, ctx.dirToSearchSinceRootDir);
-
-                CmpDirs.Run(FullA, FullB,
-                    (DIFF_STATE diffstate, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b) =>
+                while (true)
+                {
+                    ParallelCtx ctx = null;
+                    lock (_workItems)
                     {
-                        GetDirToEnum(diffstate, ref find_data_a, ref find_data_b, out string newDirToEnum, out uint attrs);
-
-                        if (newDirToEnum != null && WalkIntoDir(attrs, _opts.followJunctions, ctx.depth, _opts.maxDepth))
+                        if ( _workItems.Count == 0 )
                         {
-                            QueueOneDirForCompare(ctx.dirToSearchSinceRootDir == null ? newDirToEnum : Path.Combine(ctx.dirToSearchSinceRootDir, newDirToEnum), ctx.depth);
+                            break;
                         }
-                        else
-                        {
-                            _opts.diffHandler(diffstate, ctx.dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
-                        }
-                    },
-                    _opts.errorHandler,
-                    _CtrlCEvent);
+                        ctx = _workItems.Dequeue();
+                    }
+                    CompareTwoDirectories(ctx.dirToSearchSinceRootDir, ctx.depth);
+                    Interlocked.Increment(ref _ComparesDone);
+                    DecrementEnumerationQueueCountAndSetFinishedIfZero();
+                }
             }
             catch (Exception ex)
             {
@@ -154,11 +165,33 @@ namespace CmpTrees
             }
             finally
             {
-                _MaxEnumsRunning?.Release();
                 Interlocked.Decrement(ref _EnumerationsRunning);
-                Interlocked.Increment(ref _ComparesDone);
-                DecrementEnumerationQueueCountAndSetFinishedIfZero();
+                Interlocked.Decrement(ref _ThreadpoolUserItemsEnqueued);
             }
+        }
+
+        private void CompareTwoDirectories(string dirToSearchSinceRootDir, int depth)
+        {
+            string FullA = BuildFullDirName(_RootDirA, dirToSearchSinceRootDir);
+            string FullB = BuildFullDirName(_RootDirB, dirToSearchSinceRootDir);
+
+            CmpDirs.Run(FullA, FullB,
+                (DIFF_STATE diffstate, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b) =>
+                {
+                    GetDirToEnum(diffstate, ref find_data_a, ref find_data_b, out string newDirToEnum, out uint attrs);
+
+                    if (newDirToEnum != null && WalkIntoDir(attrs, _opts.followJunctions, depth, _opts.maxDepth))
+                    {
+                        QueueOneDirForCompare(dirToSearchSinceRootDir == null ? newDirToEnum : Path.Combine(dirToSearchSinceRootDir, newDirToEnum), depth);
+                    }
+                    else
+                    {
+                        
+                    }
+                    _opts.diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
+                },
+                _opts.errorHandler,
+                _CtrlCEvent);
         }
 
         private static void GetDirToEnum(DIFF_STATE state, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
