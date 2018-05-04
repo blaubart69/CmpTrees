@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using Microsoft.Win32.SafeHandles;
 using System.Runtime.ConstrainedExecution;
+using System.Collections.Generic;
 
 namespace Spi.Native
 {
@@ -69,7 +70,7 @@ namespace Spi.Native
         }
         */
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public struct WIN32_FIND_DATA
+        public struct WIN32_FIND_DATA : IEquatable<WIN32_FIND_DATA>
         {
             public uint dwFileAttributes;
             public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
@@ -84,10 +85,39 @@ namespace Spi.Native
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)]
             public string cAlternateFileName;
 
+            public override bool Equals(object obj)
+            {
+                return obj is WIN32_FIND_DATA && Equals((WIN32_FIND_DATA)obj);
+            }
+
+            public bool Equals(WIN32_FIND_DATA other)
+            {
+                return EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftCreationTime, other.ftCreationTime) &&
+                       //EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftLastAccessTime, other.ftLastAccessTime) &&
+                       EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftLastWriteTime, other.ftLastWriteTime) &&
+                       nFileSizeHigh == other.nFileSizeHigh &&
+                       nFileSizeLow == other.nFileSizeLow &&
+                       cFileName == other.cFileName;
+            }
+
+            public override int GetHashCode()
+            {
+                var hashCode = -1111092689;
+                hashCode = hashCode * -1521134295 + base.GetHashCode();
+                hashCode = hashCode * -1521134295 + EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.GetHashCode(ftCreationTime);
+                //hashCode = hashCode * -1521134295 + EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.GetHashCode(ftLastAccessTime);
+                hashCode = hashCode * -1521134295 + EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.GetHashCode(ftLastWriteTime);
+                hashCode = hashCode * -1521134295 + nFileSizeHigh.GetHashCode();
+                hashCode = hashCode * -1521134295 + nFileSizeLow.GetHashCode();
+                hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(cFileName);
+                return hashCode;
+            }
+
             public override string ToString()
             {
                 return cFileName;
             }
+
         }
 
         /*

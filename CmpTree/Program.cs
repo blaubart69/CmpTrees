@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
+using System.Linq;
 
 using Spi;
 using Spi.Native;
@@ -34,11 +34,6 @@ namespace CmpTrees
         public bool FollowJunctions = false;
         public int Depth = -1;
         public int MaxThreads = 32;
-    }
-    class DiffCallbackContext
-    {
-        public Stats stats;
-        public DiffWriter writers;
     }
     class Program
     {
@@ -89,12 +84,13 @@ namespace CmpTrees
                     maxDepth = opts.Depth
                 };
 
-                var paraCmp = new CmpDirsParallel<DiffCallbackContext>(
+                DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters);
+
+                var paraCmp = new CmpDirsParallel(
                     Spi.Long.GetLongFilenameNotation(opts.DirA),
                     Spi.Long.GetLongFilenameNotation(opts.DirB),
                     enumOpts,
-                    DiffCallback,
-                    new DiffCallbackContext() { stats = stats, writers = diffWriters },
+                    diffProcessor.DiffCallback,
                     (int RetCode, string Message) => errWriter.WriteLine($"E: rc={RetCode}\t{Message}"),
                     CtrlCEvent);
                 paraCmp.Start(opts.MaxThreads);
@@ -102,95 +98,19 @@ namespace CmpTrees
                 StatusLineWriter statWriter = new StatusLineWriter();
                 Misc.WaitUtilSet(paraCmp.IsFinished, 2000, () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
+
+                Console.Out.WriteLine("detecting possible moves...");
+                IComparer<Win32.WIN32_FIND_DATA> find_data_nameComparer = new FindDataNameComparer();
+                MoveDetector.Run(
+                    newFiles: new SortedList<Win32.WIN32_FIND_DATA, List<string>>(diffProcessor.newFiles, find_data_nameComparer),
+                    delFiles: new SortedList<Win32.WIN32_FIND_DATA, List<string>>(diffProcessor.delFiles, find_data_nameComparer));
+
                 if (errWriter.hasDataWritten())
                 {
                     Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
                 }
             }
         }
-        private static void DiffCallback(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, DiffCallbackContext ctx)
-        {
-            if (state == DIFF_STATE.SAMESAME)
-            {
-                return;
-            }
-            Win32.WIN32_FIND_DATA? dataToPrint = null;
-            TextWriter toWriteTo;
-            switch (state)
-            {
-                default:
-                    throw new Exception($"internal error. no such writer for this kind of state. [{state.ToString()}]");
-                case DIFF_STATE.NEW:
-                    if (Spi.Misc.IsDirectoryFlagSet(find_data_b))
-                    {
-                        toWriteTo = ctx.writers.newDirWriter;
-                        Interlocked.Increment(ref ctx.stats.DirsNew);
-                    }
-                    else
-                    {
-                        toWriteTo = ctx.writers.newWriter;
-                        Interlocked.Increment(ref ctx.stats.FilesNew);
-                        Interlocked.Add(ref ctx.stats.FilesNewBytes, (long)Misc.GetFilesize(find_data_b));
-                        dataToPrint = find_data_b;
-                    }
-                    break;
-                case DIFF_STATE.MODIFY:
-                    toWriteTo = ctx.writers.modWriter;
-                    Interlocked.Increment(ref ctx.stats.FilesMod);
-                    Interlocked.Add(ref ctx.stats.FilesModBytes, (long)Misc.GetFilesize(find_data_b) - (long)Misc.GetFilesize(find_data_a));
-                    dataToPrint = find_data_b;
-                    break;
-                case DIFF_STATE.DELETE:
-                    if (Spi.Misc.IsDirectoryFlagSet(find_data_a))
-                    {
-                        toWriteTo = ctx.writers.delDirWriter;
-                        Interlocked.Increment(ref ctx.stats.DirsDel);
-                    }
-                    else
-                    {
-                        toWriteTo = ctx.writers.delWriter;
-                        Interlocked.Increment(ref ctx.stats.FilesDel);
-                        Interlocked.Add(ref ctx.stats.FilesDelBytes, (long)Misc.GetFilesize(find_data_a));
-                        dataToPrint = find_data_a;
-                    }
-                    break;
-
-            }
-            string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
-            string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
-            string FullFilename = basedir + filenameToPrint;
-
-            if (dataToPrint.HasValue)
-            {
-                var data = dataToPrint.Value;
-                toWriteTo.WriteLine(
-                      $"{Misc.GetFilesize(data)}"
-                    + $"\t{ConvertFiletimeToString(data.ftCreationTime, FullFilename, "creationTime")}"
-                    + $"\t{ConvertFiletimeToString(data.ftLastWriteTime, FullFilename, "lastWriteTime")}"
-                    + $"\t{ConvertFiletimeToString(data.ftLastAccessTime, FullFilename, "lastAccessTime")}"
-                    + $"\t{FullFilename}");
-            }
-            else
-            {
-                toWriteTo.WriteLine($"{FullFilename}");
-            }
-
-        }
-        private static string ConvertFiletimeToString(FILETIME filetime, string FullFilename, string KindOfFiletime)
-        {
-            string result;
-            try
-            {
-                result = Misc.FiletimeToString(filetime);
-            }
-            catch (System.ComponentModel.Win32Exception wex)
-            {
-                result = "error";
-                System.Console.Error.WriteLine($"error converting filetime: value 0x{Misc.FiletimeToLong(filetime):x}, message: {wex.Message}, TypeOf: {KindOfFiletime}, Filename: [{FullFilename}]");
-            }
-            return result;
-        }
-
         private static void WriteProgress(Stats stats, long queued, long running, long cmpsDone, StatusLineWriter statWriter)
         {
             Process currProc = null;

@@ -9,7 +9,7 @@ using Spi.Data;
 namespace CmpTrees
 {
     public delegate void ErrorHandler(int RetCode, string Message);
-    public delegate void DiffHandler<C>(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, C context);
+    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b);
     
     class ParallelCtx
     {
@@ -29,13 +29,12 @@ namespace CmpTrees
         public bool followJunctions = false;
     }
 
-    public class CmpDirsParallel<C>
+    public class CmpDirsParallel
     {
         readonly string _RootDirA;
         readonly string _RootDirB;
         readonly EnumOptions _opts;
-        readonly DiffHandler<C> _diffHandler;
-        readonly C _DiffCallbackContext;
+        readonly DiffHandler _diffHandler;
         readonly ErrorHandler _errorHandler;
         readonly ManualResetEvent _CtrlCEvent;
         readonly ManualResetEvent _isFinished;
@@ -66,13 +65,12 @@ namespace CmpTrees
             get { return _isFinished; }
         }
 
-        public CmpDirsParallel(string dira, string dirb, EnumOptions opts, DiffHandler<C> diffHandler, C context, ErrorHandler errorHandler, ManualResetEvent CtrlCEvent)
+        public CmpDirsParallel(string dira, string dirb, EnumOptions opts, DiffHandler diffHandler, ErrorHandler errorHandler, ManualResetEvent CtrlCEvent)
         {
             _RootDirA = dira;
             _RootDirB = dirb;
             _opts = opts;
             _diffHandler = diffHandler;
-            _DiffCallbackContext = context;
             _errorHandler = errorHandler;
             _CtrlCEvent = CtrlCEvent;
             _isFinished = new ManualResetEvent(false);
@@ -207,7 +205,7 @@ namespace CmpTrees
                     {
                         
                     }
-                    _diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b, _DiffCallbackContext);
+                    _diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
                 },
                 _errorHandler,
                 _CtrlCEvent);

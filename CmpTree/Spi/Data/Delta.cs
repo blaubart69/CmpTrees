@@ -10,9 +10,9 @@ namespace Spi.Data
         DELETE,
         SAMESAME
     }
-    public class Diff
+    public class DiffSortedLists
     {
-        public static uint DiffSortedEnumerables<T>(
+        public static uint Run<T>(
             IEnumerable<T> ListA,
             IEnumerable<T> ListB,
             Func<T, T, int> KeyComparer,

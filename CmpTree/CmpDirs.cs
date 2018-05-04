@@ -20,7 +20,7 @@ namespace CmpTrees
                 return;
             }
 
-            Spi.Data.Diff.DiffSortedEnumerables<Win32.WIN32_FIND_DATA>(
+            Spi.Data.DiffSortedLists.Run<Win32.WIN32_FIND_DATA>(
                 ListA: sortedItemsA,
                 ListB: sortedItemsB,
                 checkSortOrder: true,

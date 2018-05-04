@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CmpTrees
 {
-    class DiffWriter : IDisposable
+    public class DiffWriter : IDisposable
     {
         public readonly TextWriter newWriter;
         public readonly TextWriter modWriter;
