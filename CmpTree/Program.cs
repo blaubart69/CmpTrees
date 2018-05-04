@@ -17,8 +17,11 @@ namespace CmpTrees
         public long FilesA;
         public long FilesB;
         public long FilesNew;
+        public long FilesNewBytes;
         public long FilesMod;
+        public long FilesModBytes;
         public long FilesDel;
+        public long FilesDelBytes;
         public long DirsNew;
         public long DirsDel;
     }
@@ -31,9 +34,14 @@ namespace CmpTrees
         public int Depth = -1;
         public int MaxThreads = 32;
     }
+    class DiffCallbackContext
+    {
+        public Stats stats;
+        public DiffWriter writers;
+    }
     class Program
     {
-        static readonly string ErrFilename = Path.Combine(Environment.GetEnvironmentVariable("temp"), "cmptree.err.txt");
+        static readonly string ErrFilename = Path.Combine(Environment.GetEnvironmentVariable("temp"), "cmptrees.err.txt");
         static int Main(string[] args)
         {
             Opts opts;
@@ -48,103 +56,14 @@ namespace CmpTrees
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine("could not set SE_BACKUP_PRIVILEGE");
+                Console.Error.WriteLine($"could not set SE_BACKUP_PRIVILEGE [{ex.Message}]");
             }
 
             try
             {
-                ManualResetEvent CrtlCEvent = new ManualResetEvent(false);
-                new Thread(new ThreadStart(() =>
-                {
-                    while (true)
-                    {
-                        if (Console.ReadKey().KeyChar == 'q')
-                        {
-                            Console.Error.WriteLine("\ngoing down...\n");
-                            CrtlCEvent.Set();
-                            break;
-                        }
-                    }
-                })){ IsBackground = true }.Start();
-
-                DateTime start = DateTime.Now;
-                using (var errWriter           = new ConsoleAndFileWriter(Console.Error, ErrFilename))
-                using (TextWriter newWriter    = TextWriter.Synchronized(new StreamWriter(@".\new.txt", append: false, encoding: Encoding.UTF8)))
-                using (TextWriter modWriter    = TextWriter.Synchronized(new StreamWriter(@".\mod.txt", append: false, encoding: Encoding.UTF8)))
-                using (TextWriter delWriter    = TextWriter.Synchronized(new StreamWriter(@".\del.txt", append: false, encoding: Encoding.UTF8)))
-                using (TextWriter newDirWriter = TextWriter.Synchronized(new StreamWriter(@".\newDirs.txt", append: false, encoding: Encoding.UTF8)))
-                using (TextWriter delDirWriter = TextWriter.Synchronized(new StreamWriter(@".\delDirs.txt", append: false, encoding: Encoding.UTF8)))
-                {
-                    Stats stats = new Stats();
-                    DiffHandler diff = (DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b) =>
-                    {
-                        if (state == DIFF_STATE.SAMESAME)
-                        {
-                            return;
-                        }
-                        string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
-                        string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
-                        TextWriter toWriteTo;
-                        switch (state)
-                        {
-                            case DIFF_STATE.NEW:
-                                if (Spi.Misc.IsDirectoryFlagSet(find_data_b))
-                                {
-                                    toWriteTo = newDirWriter; Interlocked.Increment(ref stats.DirsNew);
-                                }
-                                else
-                                {
-                                    toWriteTo = newWriter; Interlocked.Increment(ref stats.FilesNew);
-                                }
-                                break;
-                            case DIFF_STATE.MODIFY:
-                                toWriteTo = modWriter;
-                                Interlocked.Increment(ref stats.FilesMod);
-                                break;
-                            case DIFF_STATE.DELETE:
-                                if (Spi.Misc.IsDirectoryFlagSet(find_data_a))
-                                {
-                                    toWriteTo = delDirWriter; Interlocked.Increment(ref stats.DirsDel);
-                                }
-                                else
-                                {
-                                    toWriteTo = delWriter; Interlocked.Increment(ref stats.FilesDel); 
-                                }
-                                break;
-                            default: throw new Exception($"internal error. no such writer for this kind of state. [{state.ToString()}]");
-                        }
-                        toWriteTo.WriteLine($"{baseDirToPrint}{filenameToPrint}");
-                    };
-
-                    var enumOpts = new EnumOptions()
-                    {
-                        diffHandler = diff,
-                        errorHandler = (int RetCode, string Message) => errWriter.WriteLine($"E: rc={RetCode} {Message}"),
-                        followJunctions = opts.FollowJunctions,
-                        maxDepth = opts.Depth
-                    };
-
-                    ManualResetEvent cmpFinished = new ManualResetEvent(false);
-
-                    CmpDirsParallel paraCmp = new CmpDirsParallel(
-                        Spi.Long.GetLongFilenameNotation(opts.DirA),
-                        Spi.Long.GetLongFilenameNotation(opts.DirB),
-                        enumOpts, CrtlCEvent, cmpFinished);
-                    paraCmp.Start(opts.MaxThreads);
-
-                    StatusLineWriter statWriter = new StatusLineWriter();
-                    ulong cmpsDone = 0;
-                    while (!cmpFinished.WaitOne(2000))
-                    {
-                        cmpsDone = WriteProgress(stats, paraCmp, statWriter);
-                    }
-                    if (errWriter.hasDataWritten())
-                    {
-                        Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
-                    }
-                    cmpsDone = WriteProgress(stats, paraCmp, statWriter);
-                    WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), cmpsDone);
-                }
+                ManualResetEvent CtrlCEvent = new ManualResetEvent(false);
+                StartBackgroudQuitPressedThread(CtrlCEvent);
+                RunCompare(opts, CtrlCEvent);
             }
             catch (Exception ex)
             {
@@ -156,10 +75,111 @@ namespace CmpTrees
             return 0;
 
         }
-
-        private static ulong WriteProgress(Stats stats, CmpDirsParallel paraCmp, StatusLineWriter statWriter)
+        private static void RunCompare(Opts opts, ManualResetEvent CtrlCEvent)
         {
-            ulong cmpsDone;
+            DateTime start = DateTime.Now;
+            using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
+            using (DiffWriter diffWriters = new DiffWriter())
+            {
+                Stats stats = new Stats();
+                var enumOpts = new EnumOptions()
+                {
+                    followJunctions = opts.FollowJunctions,
+                    maxDepth = opts.Depth
+                };
+
+                var paraCmp = new CmpDirsParallel<DiffCallbackContext>(
+                    Spi.Long.GetLongFilenameNotation(opts.DirA),
+                    Spi.Long.GetLongFilenameNotation(opts.DirB),
+                    enumOpts,
+                    DiffCallback,
+                    new DiffCallbackContext() { stats = stats, writers = diffWriters },
+                    (int RetCode, string Message) => errWriter.WriteLine($"E: rc={RetCode}\t{Message}"),
+                    CtrlCEvent);
+                paraCmp.Start(opts.MaxThreads);
+
+                StatusLineWriter statWriter = new StatusLineWriter();
+                while (!paraCmp.WaitOne(2000))
+                {
+                    WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter);
+                }
+                WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter);
+                WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
+                if (errWriter.hasDataWritten())
+                {
+                    Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
+                }
+            }
+        }
+        private static void DiffCallback(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, DiffCallbackContext ctx)
+        {
+            if (state == DIFF_STATE.SAMESAME)
+            {
+                return;
+            }
+            string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
+            string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
+            Win32.WIN32_FIND_DATA? dataToPrint = null;
+            TextWriter toWriteTo;
+            switch (state)
+            {
+                default:
+                    throw new Exception($"internal error. no such writer for this kind of state. [{state.ToString()}]");
+                case DIFF_STATE.NEW:
+                    if (Spi.Misc.IsDirectoryFlagSet(find_data_b))
+                    {
+                        toWriteTo = ctx.writers.newDirWriter;
+                        Interlocked.Increment(ref ctx.stats.DirsNew);
+                    }
+                    else
+                    {
+                        toWriteTo = ctx.writers.newWriter;
+                        Interlocked.Increment(ref ctx.stats.FilesNew);
+                        Interlocked.Add(ref ctx.stats.FilesNewBytes, (long)Misc.GetFilesize(find_data_b));
+                        dataToPrint = find_data_b;
+                    }
+                    break;
+                case DIFF_STATE.MODIFY:
+                    toWriteTo = ctx.writers.modWriter;
+                    Interlocked.Increment(ref ctx.stats.FilesMod);
+                    Interlocked.Add(ref ctx.stats.FilesModBytes, (long)Misc.GetFilesize(find_data_b) -
+                                                              (long)Misc.GetFilesize(find_data_a));
+                    dataToPrint = find_data_b;
+                    break;
+                case DIFF_STATE.DELETE:
+                    if (Spi.Misc.IsDirectoryFlagSet(find_data_a))
+                    {
+                        toWriteTo = ctx.writers.delDirWriter;
+                        Interlocked.Increment(ref ctx.stats.DirsDel);
+                    }
+                    else
+                    {
+                        toWriteTo = ctx.writers.delWriter;
+                        Interlocked.Increment(ref ctx.stats.FilesDel);
+                        Interlocked.Add(ref ctx.stats.FilesDelBytes, (long)Misc.GetFilesize(find_data_a));
+                        dataToPrint = find_data_a;
+                    }
+                    break;
+
+            }
+            if (dataToPrint.HasValue)
+            {
+                var data = dataToPrint.Value;
+                toWriteTo.WriteLine(
+                      $"{Misc.GetFilesize(data)}"
+                    + $"\t{Misc.FiletimeToString(data.ftCreationTime)}"
+                    + $"\t{Misc.FiletimeToString(data.ftLastWriteTime)}"
+                    + $"\t{Misc.FiletimeToString(data.ftLastAccessTime)}"
+                    + $"\t{baseDirToPrint}{filenameToPrint}");
+            }
+            else
+            {
+                toWriteTo.WriteLine($"{baseDirToPrint}{filenameToPrint}");
+            }
+
+        }
+        private static void WriteProgress(Stats stats, long queued, long running, long cmpsDone, StatusLineWriter statWriter)
+        {
             Process currProc = null;
             try
             {
@@ -170,16 +190,13 @@ namespace CmpTrees
             string privMem = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
             string threadcount = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
-            paraCmp.GetCounter(out ulong queued, out ulong running, out cmpsDone);
             statWriter.WriteWithDots($"dirs queued/running/done: {queued}/{running}/{cmpsDone}"
                 + $" | new/mod/del: {stats.FilesNew}/{stats.FilesMod}/{stats.FilesDel}"
                 + $" | GC.Total: {Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))}"
                 + $" | PrivateMemory: {privMem}"
                 + $" | Threads: {threadcount}");
-            return cmpsDone;
         }
-
-        private static void WriteStatistics(TimeSpan ProgramDuration, ulong comparesDone)
+        private static void WriteStatistics(TimeSpan ProgramDuration, long comparesDone, Stats stats)
         {
             Console.Error.WriteLine($"\n{comparesDone} dirs compared in {Spi.Misc.NiceDuration(ProgramDuration)}");
             if (ProgramDuration.Ticks > 0)
@@ -190,19 +207,30 @@ namespace CmpTrees
                     cmpsPerMilli * 1000 * 60,
                     cmpsPerMilli * 1000 * 60 * 60);
             }
+            Console.Error.WriteLine(
+                $"\nnew files\t{stats.FilesNew,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesNewBytes)}"
+              + $"\nmod files\t{stats.FilesMod,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesModBytes)}"
+              + $"\ndel files\t{stats.FilesDel,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesDelBytes)}"
+              + $"\nnew dirs \t{stats.DirsNew,12:N0}"
+              + $"\ndel dirs \t{stats.DirsDel,12:N0}");
         }
-        private static string GetDiffPrefix(DIFF_STATE state)
+        static void StartBackgroudQuitPressedThread(ManualResetEvent CtrlCPressed)
         {
-            switch (state)
+            new Thread(new ThreadStart(() =>
             {
-                case DIFF_STATE.NEW: return "+";
-                case DIFF_STATE.DELETE: return "-";
-                case DIFF_STATE.MODIFY: return "%";
-                case DIFF_STATE.SAMESAME: return "S";
-            }
-            throw new Exception($"wrong state [{state.ToString()}]");
-        }
+                while (true)
+                {
+                    if (Console.ReadKey().KeyChar == 'q')
+                    {
+                        Console.Error.WriteLine("\ngoing down...\n");
+                        CtrlCPressed.Set();
+                        break;
+                    }
+                }
+            }))
+            { IsBackground = true }.Start();
 
+        }
         static void ShowHelp(Mono.Options.OptionSet p)
         {
             Console.WriteLine("Usage: CmpTrees [OPTIONS] {DirectoryA} {DirectoryB}");

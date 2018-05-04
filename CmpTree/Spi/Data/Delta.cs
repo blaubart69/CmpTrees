@@ -30,6 +30,25 @@ namespace Spi.Data
                 checkSortOrder:     checkSortOrder,
                 context:            null);
         }
+        public static uint DiffSortedEnumerables<T,C>(
+            IEnumerable<T> ListA,
+            IEnumerable<T> ListB,
+            Func<T, T, int> KeyComparer,
+            Func<T, T, int> AttributeComparer,
+            Action<DIFF_STATE, T, T, C> OnCompared,
+            bool checkSortOrder,
+            C diffContext)
+        {
+            return
+                _internal_DiffSortedEnumerables<T, T, T, C>(ListA, ListB,
+                KeySelector: item => item,
+                KeyComparer: KeyComparer,
+                AttributeSelector: item => item,
+                AttributeComparer: AttributeComparer,
+                OnCompared: OnCompared,
+                checkSortOrder: checkSortOrder,
+                context: diffContext);
+        }
 
         public static uint DiffSortedEnumerables<T,K,A>(
             IEnumerable<T>              ListA,

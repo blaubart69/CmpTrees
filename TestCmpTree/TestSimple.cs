@@ -37,17 +37,13 @@ namespace TestnCmpTree
             bool error = false;
             bool diff = false;
 
-            var enumOpts = new CmpTrees.EnumOptions()
-            {
-                diffHandler = (DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b) => { diff = true; },
-                errorHandler = (rc, msg) => { error = true;  },
-                followJunctions = false,
-                maxDepth = -1
-            };
-            var isFinished = new ManualResetEvent(false);
-
-            new CmpTrees.CmpDirsParallel(dira, dirb, enumOpts, new ManualResetEvent(false), isFinished).Start();
-            while ( ! isFinished.WaitOne(1000) )
+            var c = new CmpTrees.CmpDirsParallel<object>(dira, dirb, new CmpTrees.EnumOptions(),
+                (DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, object ctx) => { diff = true; },
+                null,
+                (rc, msg) => { error = true; },
+                new ManualResetEvent(false));
+            c.Start();
+            while ( ! c.WaitOne(1000) )
             { }
             Assert.IsFalse(error);
             Assert.IsFalse(diff);
@@ -103,21 +99,16 @@ namespace TestnCmpTree
             bool error = false;
             List<DiffData> result = new List<DiffData>();
 
-            var enumOpts = new CmpTrees.EnumOptions()
-            {
-                diffHandler = (DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b) => 
+            var c = new CmpTrees.CmpDirsParallel<object>(dira, dirb, new CmpTrees.EnumOptions(),
+                (DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, object ctx) =>
                 {
-                    result.Add(new DiffData(state,basedir,find_data_a,find_data_b));
+                    result.Add(new DiffData(state, basedir, find_data_a, find_data_b));
                 },
-                errorHandler = (rc, msg) => { error = true; },
-                followJunctions = false,
-                maxDepth = -1,
-                
-            };
-            var isFinished = new ManualResetEvent(false);
-
-            new CmpTrees.CmpDirsParallel(dira, dirb, enumOpts, new ManualResetEvent(false), isFinished).Start();
-            while (!isFinished.WaitOne(1000))
+                null,
+                (rc, msg) => { error = true; },
+                new ManualResetEvent(false));
+            c.Start();
+            while (!c.WaitOne(1000))
             { }
             Assert.IsFalse(error);
 

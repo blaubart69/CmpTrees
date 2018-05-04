@@ -9,7 +9,7 @@ using Spi.Data;
 namespace CmpTrees
 {
     public delegate void ErrorHandler(int RetCode, string Message);
-    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b);
+    public delegate void DiffHandler<C>(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, C context);
     
     class ParallelCtx
     {
@@ -25,17 +25,18 @@ namespace CmpTrees
     
     public class EnumOptions
     {
-        public int maxDepth;
-        public bool followJunctions;
-        public DiffHandler diffHandler;
-        public ErrorHandler errorHandler;
+        public int maxDepth = -1;
+        public bool followJunctions = false;
     }
 
-    public class CmpDirsParallel
+    public class CmpDirsParallel<C>
     {
         readonly string _RootDirA;
         readonly string _RootDirB;
         readonly EnumOptions _opts;
+        readonly DiffHandler<C> _diffHandler;
+        readonly C _DiffCallbackContext;
+        readonly ErrorHandler _errorHandler;
         readonly ManualResetEvent _CtrlCEvent;
         readonly ManualResetEvent _isFinished;
 
@@ -48,13 +49,29 @@ namespace CmpTrees
         long _EnumerationsRunning;
         long _ComparesDone;
 
-        public CmpDirsParallel(string dira, string dirb, EnumOptions opts, ManualResetEvent CtrlCEvent, ManualResetEvent isFinished)
+        public long Queued
+        {
+            get { return _EnumerationsQueued; }
+        }
+        public long Running
+        {
+            get { return _EnumerationsRunning;  }
+        }
+        public long Done
+        {
+            get { return _ComparesDone;  }
+        }
+
+        public CmpDirsParallel(string dira, string dirb, EnumOptions opts, DiffHandler<C> diffHandler, C context, ErrorHandler errorHandler, ManualResetEvent CtrlCEvent)
         {
             _RootDirA = dira;
             _RootDirB = dirb;
             _opts = opts;
+            _diffHandler = diffHandler;
+            _DiffCallbackContext = context;
+            _errorHandler = errorHandler;
             _CtrlCEvent = CtrlCEvent;
-            _isFinished = isFinished;
+            _isFinished = new ManualResetEvent(false);
             _workItems = new Queue<ParallelCtx>();
         }
         public void Start()
@@ -107,15 +124,6 @@ namespace CmpTrees
                     throw new Exception("ThreadPool.QueueUserWorkItem returned false. STOP!");
                 }
             }
-            /*
-            if (!ThreadPool.QueueUserWorkItem(
-                    callBack:   new WaitCallback(ThreadCmpOneDirectory),
-                    state:      new ParallelCtx(dirSinceRootDir, currDepth + 1)))
-            {
-                Interlocked.Decrement(ref _EnumerationsQueued);
-                throw new Exception("ThreadPool.QueueUserWorkItem returned false. STOP!");
-            }
-            */
         }
         private void DecrementEnumerationQueueCountAndSetFinishedIfZero()
         {
@@ -154,7 +162,7 @@ namespace CmpTrees
             {
                 try
                 {
-                    _opts.errorHandler?.Invoke(99,$"Exception caught (ThreadEnumDir): {ex.Message}\n{ex.StackTrace}");
+                    _errorHandler?.Invoke(99,$"Exception caught (ThreadEnumDir): {ex.Message}\n{ex.StackTrace}");
                 }
                 catch (Exception ex2)
                 {
@@ -188,9 +196,9 @@ namespace CmpTrees
                     {
                         
                     }
-                    _opts.diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
+                    _diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b, _DiffCallbackContext);
                 },
-                _opts.errorHandler,
+                _errorHandler,
                 _CtrlCEvent);
         }
 
@@ -252,6 +260,10 @@ namespace CmpTrees
 
             return enterDir;
 
+        }
+        public bool WaitOne(int milliSeconds)
+        {
+            return _isFinished.WaitOne(milliSeconds);
         }
     }
 }

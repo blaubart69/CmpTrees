@@ -41,6 +41,7 @@
   <ItemGroup>
     <Compile Include="CmpDirs.cs" />
     <Compile Include="CmpDirsParallel.cs" />
+    <Compile Include="DiffWriter.cs" />
     <Compile Include="EnumDir.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="Program.cs" />
