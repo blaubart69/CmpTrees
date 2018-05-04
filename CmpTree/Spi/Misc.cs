@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Text;
 using System.Runtime.InteropServices.ComTypes;
+using System.Threading;
+using System.IO;
 
 namespace Spi
 {
@@ -41,7 +43,6 @@ namespace Spi
         {
             return GetPrettyFilesize((ulong)Filesize);
         }
-
         public static string FiletimeToString(FILETIME filetime)
         {
             Native.Win32.SYSTEMTIME universalSystemtime;
@@ -122,5 +123,14 @@ namespace Spi
         {
             return TwoUIntsToULong(find_data.nFileSizeHigh, find_data.nFileSizeLow);
         }
+        public static void WaitUtilSet(WaitHandle waitHandle, int milliSeconds, Action doEvery)
+        {
+            while ( !waitHandle.WaitOne(milliSeconds) )
+            {
+                doEvery();
+            }
+            doEvery();
+        }
+        
     }
 }

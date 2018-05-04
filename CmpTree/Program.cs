@@ -9,6 +9,7 @@ using System.Diagnostics;
 using Spi;
 using Spi.Native;
 using Spi.Data;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace CmpTrees
 {
@@ -99,11 +100,7 @@ namespace CmpTrees
                 paraCmp.Start(opts.MaxThreads);
 
                 StatusLineWriter statWriter = new StatusLineWriter();
-                while (!paraCmp.WaitOne(2000))
-                {
-                    WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter);
-                }
-                WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter);
+                Misc.WaitUtilSet(paraCmp.IsFinished, 2000, () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
                 if (errWriter.hasDataWritten())
                 {
@@ -117,8 +114,6 @@ namespace CmpTrees
             {
                 return;
             }
-            string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
-            string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
             Win32.WIN32_FIND_DATA? dataToPrint = null;
             TextWriter toWriteTo;
             switch (state)
@@ -142,8 +137,7 @@ namespace CmpTrees
                 case DIFF_STATE.MODIFY:
                     toWriteTo = ctx.writers.modWriter;
                     Interlocked.Increment(ref ctx.stats.FilesMod);
-                    Interlocked.Add(ref ctx.stats.FilesModBytes, (long)Misc.GetFilesize(find_data_b) -
-                                                              (long)Misc.GetFilesize(find_data_a));
+                    Interlocked.Add(ref ctx.stats.FilesModBytes, (long)Misc.GetFilesize(find_data_b) - (long)Misc.GetFilesize(find_data_a));
                     dataToPrint = find_data_b;
                     break;
                 case DIFF_STATE.DELETE:
@@ -162,22 +156,41 @@ namespace CmpTrees
                     break;
 
             }
+            string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
+            string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
+            string FullFilename = basedir + filenameToPrint;
+
             if (dataToPrint.HasValue)
             {
                 var data = dataToPrint.Value;
                 toWriteTo.WriteLine(
                       $"{Misc.GetFilesize(data)}"
-                    + $"\t{Misc.FiletimeToString(data.ftCreationTime)}"
-                    + $"\t{Misc.FiletimeToString(data.ftLastWriteTime)}"
-                    + $"\t{Misc.FiletimeToString(data.ftLastAccessTime)}"
-                    + $"\t{baseDirToPrint}{filenameToPrint}");
+                    + $"\t{ConvertFiletimeToString(data.ftCreationTime, FullFilename, "creationTime")}"
+                    + $"\t{ConvertFiletimeToString(data.ftLastWriteTime, FullFilename, "lastWriteTime")}"
+                    + $"\t{ConvertFiletimeToString(data.ftLastAccessTime, FullFilename, "lastAccessTime")}"
+                    + $"\t{FullFilename}");
             }
             else
             {
-                toWriteTo.WriteLine($"{baseDirToPrint}{filenameToPrint}");
+                toWriteTo.WriteLine($"{FullFilename}");
             }
 
         }
+        private static string ConvertFiletimeToString(FILETIME filetime, string FullFilename, string KindOfFiletime)
+        {
+            string result;
+            try
+            {
+                result = Misc.FiletimeToString(filetime);
+            }
+            catch (System.ComponentModel.Win32Exception wex)
+            {
+                result = "error";
+                System.Console.Error.WriteLine($"error converting filetime: value 0x{Misc.FiletimeToLong(filetime):x}, message: {wex.Message}, TypeOf: {KindOfFiletime}, Filename: [{FullFilename}]");
+            }
+            return result;
+        }
+
         private static void WriteProgress(Stats stats, long queued, long running, long cmpsDone, StatusLineWriter statWriter)
         {
             Process currProc = null;

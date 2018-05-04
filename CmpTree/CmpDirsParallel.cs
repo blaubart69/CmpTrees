@@ -61,6 +61,10 @@ namespace CmpTrees
         {
             get { return _ComparesDone;  }
         }
+        public WaitHandle IsFinished
+        {
+            get { return _isFinished; }
+        }
 
         public CmpDirsParallel(string dira, string dirb, EnumOptions opts, DiffHandler<C> diffHandler, C context, ErrorHandler errorHandler, ManualResetEvent CtrlCEvent)
         {
@@ -153,7 +157,14 @@ namespace CmpTrees
                         }
                         ctx = _workItems.Dequeue();
                     }
-                    CompareTwoDirectories(ctx.dirToSearchSinceRootDir, ctx.depth);
+                    try
+                    {
+                        CompareTwoDirectories(ctx.dirToSearchSinceRootDir, ctx.depth);
+                    }
+                    catch (Exception ex)
+                    {
+                        _errorHandler?.Invoke(99, $"Exception caught (ThreadEnumDir-CompareTwoDirectories): {ex.Message}\n{ex.StackTrace}");
+                    }
                     Interlocked.Increment(ref _ComparesDone);
                     DecrementEnumerationQueueCountAndSetFinishedIfZero();
                 }
@@ -260,10 +271,6 @@ namespace CmpTrees
 
             return enterDir;
 
-        }
-        public bool WaitOne(int milliSeconds)
-        {
-            return _isFinished.WaitOne(milliSeconds);
         }
     }
 }

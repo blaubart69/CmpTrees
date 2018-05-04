@@ -43,7 +43,7 @@ namespace TestnCmpTree
                 (rc, msg) => { error = true; },
                 new ManualResetEvent(false));
             c.Start();
-            while ( ! c.WaitOne(1000) )
+            while ( ! c.IsFinished.WaitOne(1000) )
             { }
             Assert.IsFalse(error);
             Assert.IsFalse(diff);
@@ -108,7 +108,7 @@ namespace TestnCmpTree
                 (rc, msg) => { error = true; },
                 new ManualResetEvent(false));
             c.Start();
-            while (!c.WaitOne(1000))
+            while (!c.IsFinished.WaitOne(1000))
             { }
             Assert.IsFalse(error);
 
