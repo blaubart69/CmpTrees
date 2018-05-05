@@ -42,6 +42,11 @@ namespace CmpTrees
                         yield return find_data;
                     }
                     while (Win32.FindNextFile(SearchHandle, out find_data));
+
+                    if ( Marshal.GetLastWin32Error() != Win32.ERROR_NO_MORE_FILES )
+                    {
+                        errorHandler?.Invoke(Marshal.GetLastWin32Error(), "FindNextFile, " + FullDirname);
+                    }
                 }
             }
         }

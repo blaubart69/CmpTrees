@@ -15,6 +15,7 @@ namespace Spi.Native
         public const int ERROR_PATH_NOT_FOUND = 0x00000003;
         public const int ERROR_INVALID_PARAMETER = 0x00000057;
         public const int ERROR_DIRECTORY = 0x10B; // The directory name is invalid.
+        public const int ERROR_NO_MORE_FILES = 0x12; // There are no more files.
 
         [Flags]
         public enum EFileAccess : uint
