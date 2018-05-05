@@ -32,7 +32,7 @@ namespace TestnCmpTree
         [TestMethod]
         public void TwoEmptyDirs()
         {
-            (string dira, string dirb) = CreateTwoDirs();
+            (string dira, string dirb) = Util.CreateTwoDirs();
 
             bool error = false;
             bool diff = false;
@@ -50,21 +50,21 @@ namespace TestnCmpTree
         [TestMethod]
         public void DirAndFileWithSameName()
         {
-            (string dira, string dirb) = CreateTwoDirs();
+            (string dira, string dirb) = Util.CreateTwoDirs();
 
             Directory.CreateDirectory(  Path.Combine(dira, "x"));
             File.WriteAllText(          Path.Combine(dirb, "x"), "content");
 
             var result = RunCmp(dira, dirb);
-            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual(2, result.Count);
 
-            //Assert.IsTrue(result.Any(r => r.state == DIFF_STATE.DELETE && r.a.cFileName.Equals("x") &&  Misc.IsDirectoryFlagSet(r.a.dwFileAttributes)));
+            Assert.IsTrue(result.Any(r => r.state == DIFF_STATE.DELETE && r.a.cFileName.Equals("x") &&  Misc.IsDirectoryFlagSet(r.a.dwFileAttributes)));
             Assert.IsTrue(result.Any(r => r.state == DIFF_STATE.NEW    && r.b.cFileName.Equals("x") && !Misc.IsDirectoryFlagSet(r.b.dwFileAttributes)));
         }
         [TestMethod]
         public void TwoSameSameFiles()
         {
-            (string dira, string dirb) = CreateTwoDirs();
+            (string dira, string dirb) = Util.CreateTwoDirs();
 
             string srcFilename = Path.Combine(dirb, "x");
             string trgFilename = Path.Combine(dira, "x");
@@ -78,7 +78,7 @@ namespace TestnCmpTree
         [TestMethod]
         public void TwoSameSameFilesInSubDir()
         {
-            (string dira, string dirb) = CreateTwoDirs();
+            (string dira, string dirb) = Util.CreateTwoDirs();
 
             string sub1 = Directory.CreateDirectory(Path.Combine(dira, "subdir")).FullName;
             string sub2 = Directory.CreateDirectory(Path.Combine(dirb, "subdir")).FullName;
@@ -88,9 +88,9 @@ namespace TestnCmpTree
             File.Copy(srcFilename, trgFilename);
 
             var result = RunCmp(dira, dirb);
-            Assert.AreEqual(1, result.Count);
+            Assert.AreEqual(2, result.Count);
             Assert.IsTrue(result.Where(i => !Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("x")));
-            //Assert.IsTrue(result.Where(i =>  Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("subdir")));
+            Assert.IsTrue(result.Where(i =>  Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("subdir")));
         }
         // --------------------------------------------------------------------
         IList<DiffData> RunCmp(string dira, string dirb)
@@ -112,13 +112,6 @@ namespace TestnCmpTree
 
             return result;
         }
-        (string dira, string dirb) CreateTwoDirs()
-        {
-            string baseDir = Path.Combine(System.IO.Path.GetTempPath(),"TestCmpTree-" + Guid.NewGuid().ToString());
-            string dira = Directory.CreateDirectory(Path.Combine(baseDir, "a")).FullName;
-            string dirb = Directory.CreateDirectory(Path.Combine(baseDir, "b")).FullName;
-
-            return (dira, dirb);
-        }
+        
     }
 }

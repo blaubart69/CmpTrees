@@ -15,13 +15,16 @@ namespace CmpTrees
         public readonly TextWriter newDirWriter;
         public readonly TextWriter delDirWriter;
 
-        public DiffWriter()
+        public DiffWriter() : this(".")
         {
-            newWriter    = TextWriter.Synchronized(new StreamWriter(@".\new.txt",       append: false, encoding: Encoding.UTF8));
-            modWriter    = TextWriter.Synchronized(new StreamWriter(@".\mod.txt",       append: false, encoding: Encoding.UTF8));
-            delWriter    = TextWriter.Synchronized(new StreamWriter(@".\del.txt",       append: false, encoding: Encoding.UTF8));
-            newDirWriter = TextWriter.Synchronized(new StreamWriter(@".\newDirs.txt",   append: false, encoding: Encoding.UTF8));
-            delDirWriter = TextWriter.Synchronized(new StreamWriter(@".\delDirs.txt",   append: false, encoding: Encoding.UTF8));
+        }
+        public DiffWriter(string Directoryname)
+        {
+            newWriter    = TextWriter.Synchronized(new StreamWriter($"{Directoryname}\\new.txt",       append: false, encoding: Encoding.UTF8));
+            modWriter    = TextWriter.Synchronized(new StreamWriter($"{Directoryname}\\mod.txt",       append: false, encoding: Encoding.UTF8));
+            delWriter    = TextWriter.Synchronized(new StreamWriter($"{Directoryname}\\del.txt",       append: false, encoding: Encoding.UTF8));
+            newDirWriter = TextWriter.Synchronized(new StreamWriter($"{Directoryname}\\newDirs.txt",   append: false, encoding: Encoding.UTF8));
+            delDirWriter = TextWriter.Synchronized(new StreamWriter($"{Directoryname}\\delDirs.txt",   append: false, encoding: Encoding.UTF8));
         }
 
         public void Dispose()

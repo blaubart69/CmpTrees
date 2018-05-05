@@ -17,15 +17,15 @@ namespace CmpTrees
     {
         public readonly Stats _stats;
         public readonly DiffWriter _writers;
-        public readonly ConcurrentDictionary<Win32.FIND_DATA, List<string>> newFiles;
-        public readonly ConcurrentDictionary<Win32.FIND_DATA, List<string>> delFiles;
+        public readonly ConcurrentDictionary<Win32.FIND_DATA, List<string>> newFilesDic;
+        public readonly ConcurrentDictionary<Win32.FIND_DATA, List<string>> delFilesDic;
 
         public DiffProcessing(Stats stats, DiffWriter writers)
         {
             _stats = stats;
             _writers = writers;
-            newFiles = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>();
-            delFiles = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>();
+            newFilesDic = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>();
+            delFilesDic = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>();
         }
         /// <summary>
         /// ATTENZIONE!!!! MULTI-THREADING AHEAD!!!
@@ -56,7 +56,7 @@ namespace CmpTrees
                         Interlocked.Increment(ref _stats.FilesNew);
                         Interlocked.Add(ref _stats.FilesNewBytes, (long)find_data_b.FileSize);
                         File_data_ToUse = find_data_b;
-                        DicToUse = newFiles;
+                        DicToUse = newFilesDic;
                     }
                     break;
                 case DIFF_STATE.MODIFY:
@@ -77,7 +77,7 @@ namespace CmpTrees
                         Interlocked.Increment(ref _stats.FilesDel);
                         Interlocked.Add(ref _stats.FilesDelBytes, (long)find_data_a.FileSize);
                         File_data_ToUse = find_data_a;
-                        DicToUse = newFiles;
+                        DicToUse = delFilesDic;
                     }
                     break;
             }

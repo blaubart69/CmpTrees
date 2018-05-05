@@ -124,9 +124,9 @@ namespace Spi
         {
             while ( !waitHandle.WaitOne(milliSeconds) )
             {
-                doEvery();
+                doEvery?.Invoke();
             }
-            doEvery();
+            doEvery?.Invoke();
         }
         public static int CompareULongsToInt(ulong a, ulong b)
         {

@@ -9,8 +9,27 @@ using Spi.Native;
 namespace CmpTrees
 {
     public delegate void MoveFileHandler(string Filename, string MoveFromPath, string MoveToPath);
+
+    public class FindDataMoveComparer : IComparer<Win32.FIND_DATA>
+    {
+        public int Compare(Win32.FIND_DATA a, Win32.FIND_DATA b)
+        {
+            return MoveDetector.CompareFindData(a, b);
+        }
+    }
+
     public class MoveDetector
     {
+        public static int CompareFindData(Win32.FIND_DATA a, Win32.FIND_DATA b)
+        {
+            int cmp;
+            if ((cmp = String.Compare(a.cFileName, b.cFileName)) != 0) return cmp;
+            if ((cmp = Misc.CompareULongsToInt(a.FileSize, b.FileSize)) != 0) return cmp;
+            //if ((cmp = Misc.CmpFileTimes(a.ftCreationTime, b.ftCreationTime))   != 0) return cmp;
+            if ((cmp = Misc.CmpFileTimes(a.ftLastWriteTime, b.ftLastWriteTime)) != 0) return cmp;
+
+            return 0;
+        }
         public static void Run(SortedList<Win32.FIND_DATA, List<string>> newFiles, SortedList<Win32.FIND_DATA, List<string>> delFiles,
             ConsoleAndFileWriter errWriter,
             MoveFileHandler moveHandler)
@@ -18,7 +37,10 @@ namespace CmpTrees
             Spi.Data.DiffSortedLists.Run(
                 ListA: newFiles,
                 ListB: delFiles,
-                KeyComparer: (newFile, delFile) => delFile.Key.CompareTo(newFile.Key),
+                KeyComparer: (newFile, delFile) =>
+                {
+                    return CompareFindData(newFile.Key, delFile.Key);
+                },
                 AttributeComparer: null,
                 checkSortOrder: false,
                 OnCompared: (state, newFile, delFile) =>
@@ -36,7 +58,7 @@ namespace CmpTrees
         }
         private static bool FileAppearInMoreDirectories(Win32.FIND_DATA newFile, List<string> newDirs, Win32.FIND_DATA delFile, List<string> delDirs, ConsoleAndFileWriter errWriter)
         {
-            if ( newDirs.Count == 1 && delDirs.Count == 1 )
+            if ( newDirs.Count > 1 || delDirs.Count > 1 )
             {
                 return true;
             }

@@ -71,7 +71,7 @@ namespace Spi.Native
         }
         */
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public struct FIND_DATA : IEquatable<FIND_DATA>, IComparable<FIND_DATA>, IComparer<FIND_DATA>
+        public struct FIND_DATA
         {
             public uint dwFileAttributes;
             public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
@@ -93,40 +93,29 @@ namespace Spi.Native
                     return Misc.TwoUIntsToULong(nFileSizeHigh, nFileSizeLow);
                 }
             }
+            /*
             public bool Equals(FIND_DATA other)
             {
                 return
                        dwFileAttributes == other.dwFileAttributes
-                    && EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftCreationTime, other.ftCreationTime)
+                    //&& EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftCreationTime, other.ftCreationTime)
                     && EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftLastWriteTime, other.ftLastWriteTime)
                     && nFileSizeHigh == other.nFileSizeHigh
                     && nFileSizeLow == other.nFileSizeLow
                     && cFileName == other.cFileName;
             }
-            public int CompareTo(FIND_DATA other)
-            {
-                return Compare(this, other);
-            }
-            public int Compare(FIND_DATA a, FIND_DATA b)
-            {
-                int cmp;
-                if ((cmp = String.Compare(a.cFileName, b.cFileName))                != 0) return cmp;
-                if ((cmp = Misc.CompareULongsToInt(a.FileSize, b.FileSize))         != 0) return cmp;
-                if ((cmp = Misc.CmpFileTimes(a.ftCreationTime, b.ftCreationTime))   != 0) return cmp;
-                if ((cmp = Misc.CmpFileTimes(a.ftLastWriteTime, b.ftLastWriteTime)) != 0) return cmp;
-
-                return 0;
-            }
-            #region OVERRIDE
+            
             public override bool Equals(object obj)
             {
                 return obj is FIND_DATA && Equals((FIND_DATA)obj);
             }
+            */
+            #region OVERRIDE
             public override int GetHashCode()
             {
                 var hashCode = -1111092689;
                 hashCode = hashCode * -1521134295 + base.GetHashCode();
-                hashCode = hashCode * -1521134295 + EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.GetHashCode(ftCreationTime);
+                //hashCode = hashCode * -1521134295 + EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.GetHashCode(ftCreationTime);
                 //hashCode = hashCode * -1521134295 + EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.GetHashCode(ftLastAccessTime);
                 hashCode = hashCode * -1521134295 + EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.GetHashCode(ftLastWriteTime);
                 hashCode = hashCode * -1521134295 + nFileSizeHigh.GetHashCode();
