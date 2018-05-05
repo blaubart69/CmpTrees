@@ -9,7 +9,7 @@ using Spi.Data;
 namespace CmpTrees
 {
     public delegate void ErrorHandler(int RetCode, string Message);
-    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b);
+    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b);
     
     class ParallelCtx
     {
@@ -193,7 +193,7 @@ namespace CmpTrees
             string FullB = BuildFullDirName(_RootDirB, dirToSearchSinceRootDir);
 
             CmpDirs.Run(FullA, FullB,
-                (DIFF_STATE diffstate, Win32.WIN32_FIND_DATA find_data_a, Win32.WIN32_FIND_DATA find_data_b) =>
+                (DIFF_STATE diffstate, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b) =>
                 {
                     GetDirToEnum(diffstate, ref find_data_a, ref find_data_b, out string newDirToEnum, out uint attrs);
 
@@ -211,7 +211,7 @@ namespace CmpTrees
                 _CtrlCEvent);
         }
 
-        private static void GetDirToEnum(DIFF_STATE state, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
+        private static void GetDirToEnum(DIFF_STATE state, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
         {
             newDirToEnum = null;
             attrs = 0;

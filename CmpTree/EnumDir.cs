@@ -11,9 +11,9 @@ namespace CmpTrees
 {
     public class EnumDir
     {
-        public static IEnumerable<Spi.Native.Win32.WIN32_FIND_DATA> Entries(string FullDirname, ErrorHandler errorHandler, ManualResetEvent Cancel)
+        public static IEnumerable<Spi.Native.Win32.FIND_DATA> Entries(string FullDirname, ErrorHandler errorHandler, ManualResetEvent Cancel)
         {
-            using (SafeFindHandle SearchHandle = Win32.FindFirstFile(FullDirname + "\\*", out Win32.WIN32_FIND_DATA find_data))
+            using (SafeFindHandle SearchHandle = Win32.FindFirstFile(FullDirname + "\\*", out Win32.FIND_DATA find_data))
             {
                 if (SearchHandle.IsInvalid)
                 {

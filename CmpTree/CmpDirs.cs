@@ -10,17 +10,17 @@ namespace CmpTrees
 {
     class CmpDirs
     {
-        public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.WIN32_FIND_DATA, Win32.WIN32_FIND_DATA> DiffCallback, ErrorHandler errorHandler, ManualResetEvent Cancel)
+        public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, ErrorHandler errorHandler, ManualResetEvent Cancel)
         {
-            IEnumerable<Win32.WIN32_FIND_DATA> sortedItemsA = EnumDir.Entries(dira, errorHandler, Cancel);
-            IEnumerable<Win32.WIN32_FIND_DATA> sortedItemsB = EnumDir.Entries(dirb, errorHandler, Cancel);
+            IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.Entries(dira, errorHandler, Cancel);
+            IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.Entries(dirb, errorHandler, Cancel);
 
             if ( Cancel.WaitOne(0) )
             {
                 return;
             }
 
-            Spi.Data.DiffSortedLists.Run<Win32.WIN32_FIND_DATA>(
+            Spi.Data.DiffSortedLists.Run<Win32.FIND_DATA>(
                 ListA: sortedItemsA,
                 ListB: sortedItemsB,
                 checkSortOrder: true,
@@ -50,7 +50,7 @@ namespace CmpTrees
                     {
                         return (int)cmp;
                     }
-                    if ((cmp = (long)(Misc.GetFilesize(a) - Misc.GetFilesize(b)) ) != 0)
+                    if ((cmp = (long)(a.FileSize - b.FileSize) ) != 0)
                     {
                         return (int)cmp;
                     }

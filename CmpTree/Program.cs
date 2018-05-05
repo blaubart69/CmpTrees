@@ -10,6 +10,7 @@ using Spi;
 using Spi.Native;
 using Spi.Data;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 
 namespace CmpTrees
 {
@@ -59,7 +60,19 @@ namespace CmpTrees
             {
                 ManualResetEvent CtrlCEvent = new ManualResetEvent(false);
                 StartBackgroudQuitPressedThread(CtrlCEvent);
-                RunCompare(opts, CtrlCEvent);
+                using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
+                {
+                    RunCompare(opts, CtrlCEvent, errWriter,
+                        out SortedList<Win32.FIND_DATA, List<string>> newFiles,
+                        out SortedList<Win32.FIND_DATA, List<string>> delFiles);
+
+                    RunMoveDetector(newFiles, delFiles, errWriter);
+
+                    if (errWriter.hasDataWritten())
+                    {
+                        Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -71,10 +84,29 @@ namespace CmpTrees
             return 0;
 
         }
-        private static void RunCompare(Opts opts, ManualResetEvent CtrlCEvent)
+
+        private static void RunMoveDetector(SortedList<Win32.FIND_DATA, List<string>> newFiles, SortedList<Win32.FIND_DATA, List<string>> delFiles, ConsoleAndFileWriter errWriter)
+        {
+            using (var writer = new StreamWriter(@".\moved.txt", append: false, encoding: Encoding.UTF8))
+            {
+                Console.Out.WriteLine("detecting possible moves...");
+                ulong possibleFileMoves = 0;
+                MoveDetector.Run(newFiles, delFiles, errWriter,
+                    (filename, FromDir, ToDir) =>
+                    {
+                        possibleFileMoves += 1;
+                        writer.WriteLine($"{filename}\t{FromDir}\t{ToDir}");
+                    });
+                Console.Out.WriteLine($"{possibleFileMoves} possible moves of files found.");
+            }
+        }
+
+        private static void RunCompare(Opts opts, ManualResetEvent CtrlCEvent, ConsoleAndFileWriter errWriter,
+            out SortedList<Win32.FIND_DATA, List<string>> newFiles,
+            out SortedList<Win32.FIND_DATA, List<string>> delFiles)
         {
             DateTime start = DateTime.Now;
-            using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
+
             using (DiffWriter diffWriters = new DiffWriter())
             {
                 Stats stats = new Stats();
@@ -99,16 +131,9 @@ namespace CmpTrees
                 Misc.WaitUtilSet(paraCmp.IsFinished, 2000, () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
 
-                Console.Out.WriteLine("detecting possible moves...");
-                IComparer<Win32.WIN32_FIND_DATA> find_data_nameComparer = new FindDataNameComparer();
-                MoveDetector.Run(
-                    newFiles: new SortedList<Win32.WIN32_FIND_DATA, List<string>>(diffProcessor.newFiles, find_data_nameComparer),
-                    delFiles: new SortedList<Win32.WIN32_FIND_DATA, List<string>>(diffProcessor.delFiles, find_data_nameComparer));
-
-                if (errWriter.hasDataWritten())
-                {
-                    Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
-                }
+                IComparer<Win32.FIND_DATA> find_data_Comparer = new Win32.FIND_DATA();
+                newFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProcessor.newFiles, find_data_Comparer);
+                delFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProcessor.delFiles, find_data_Comparer);
             }
         }
         private static void WriteProgress(Stats stats, long queued, long running, long cmpsDone, StatusLineWriter statWriter)
@@ -210,6 +235,5 @@ namespace CmpTrees
             }
             return opts;
         }
-
     }
 }

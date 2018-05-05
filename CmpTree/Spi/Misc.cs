@@ -115,14 +115,11 @@ namespace Spi
         {
             return (dwFileAttributes & 0x10) != 0;
         }
-        public static bool IsDirectoryFlagSet(Spi.Native.Win32.WIN32_FIND_DATA find_data)
+        public static bool IsDirectoryFlagSet(Spi.Native.Win32.FIND_DATA find_data)
         {
             return IsDirectoryFlagSet(find_data.dwFileAttributes);
         }
-        public static ulong GetFilesize(Spi.Native.Win32.WIN32_FIND_DATA find_data)
-        {
-            return TwoUIntsToULong(find_data.nFileSizeHigh, find_data.nFileSizeLow);
-        }
+        
         public static void WaitUtilSet(WaitHandle waitHandle, int milliSeconds, Action doEvery)
         {
             while ( !waitHandle.WaitOne(milliSeconds) )
@@ -131,6 +128,25 @@ namespace Spi
             }
             doEvery();
         }
-        
+        public static int CompareULongsToInt(ulong a, ulong b)
+        {
+            if (a < b)
+            {
+                return -1;
+            }
+            else if (a > b)
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+        public static int CmpFileTimes(System.Runtime.InteropServices.ComTypes.FILETIME a, System.Runtime.InteropServices.ComTypes.FILETIME b)
+        {
+            long aLong = Misc.FiletimeToLong(a);
+            long bLong = Misc.FiletimeToLong(b);
+
+            return CompareULongsToInt((ulong)aLong, (ulong)bLong);
+        }
     }
 }

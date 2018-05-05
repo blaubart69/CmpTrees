@@ -80,8 +80,6 @@ namespace Spi.Data
         {
             if (KeyComparer         == null) throw new ArgumentNullException(nameof(KeyComparer));
             if (KeySelector         == null) throw new ArgumentNullException(nameof(KeySelector));
-            if (AttributeComparer   == null) throw new ArgumentNullException(nameof(AttributeComparer));
-            if (AttributeSelector   == null) throw new ArgumentNullException(nameof(AttributeSelector));
             if (OnCompared          == null) throw new ArgumentNullException(nameof(OnCompared));
 
             using (IEnumerator<T> IterA = ListA.GetEnumerator())
@@ -102,7 +100,7 @@ namespace Spi.Data
                     DIFF_STATE DeltaState = DIFF_STATE.SAMESAME;
                     if (hasMoreA && hasMoreB)
                     {
-                        DeltaState = ItemCompareFunc(KeyComparer(keyA,keyB), IterA.Current, IterB.Current, AttributeSelector, AttributeComparer);
+                        DeltaState = ItemCompareFunc(KeyComparer(keyA, keyB), IterA.Current, IterB.Current, AttributeSelector, AttributeComparer);
                         OnCompared(DeltaState, IterA.Current, IterB.Current, context);
                         LastKeyA = keyA;
                         LastKeyB = keyB;
@@ -126,37 +124,42 @@ namespace Spi.Data
                     {
                         CountDifferences += 1;
                     }
-                    // move the iterators based on the diff result
-                    switch (DeltaState)
+
+                    MoveIterators(IterA, IterB, ref hasMoreA, ref hasMoreB, DeltaState);
+
+                    if (hasMoreA)
                     {
-                        case DIFF_STATE.SAMESAME:
-                        case DIFF_STATE.MODIFY:
-                            hasMoreA = IterA.MoveNext();
-                            hasMoreB = IterB.MoveNext();
-                            break;
-                        case DIFF_STATE.NEW:
-                            hasMoreB = IterB.MoveNext();
-                            break;
-                        case DIFF_STATE.DELETE:
-                            hasMoreA = IterA.MoveNext();
-                            break;
+                        keyA = KeySelector(IterA.Current);
+                    }
+                    if (hasMoreB)
+                    {
+                        keyB = KeySelector(IterB.Current);
                     }
                     if (checkSortOrder)
                     {
-                        // check if the sortorder is given and throw an exception if not
-                        if (hasMoreA)
-                        {
-                            keyA = KeySelector(IterA.Current);
-                            CheckSortOrderOfItems(KeyComparer, LastKeyA, keyA, 'A');
-                        }
-                        if (hasMoreB)
-                        {
-                            keyB = KeySelector(IterB.Current);
-                            CheckSortOrderOfItems(KeyComparer, LastKeyB, keyB, 'B');
-                        }
+                        CheckSortOrderOfItems(KeyComparer, LastKeyA, keyA, 'A');
+                        CheckSortOrderOfItems(KeyComparer, LastKeyB, keyB, 'B');
                     }
                 }
                 return CountDifferences;
+            }
+        }
+
+        private static void MoveIterators<T>(IEnumerator<T> IterA, IEnumerator<T> IterB, ref bool hasMoreA, ref bool hasMoreB, DIFF_STATE DeltaState)
+        {
+            switch (DeltaState)
+            {
+                case DIFF_STATE.SAMESAME:
+                case DIFF_STATE.MODIFY:
+                    hasMoreA = IterA.MoveNext();
+                    hasMoreB = IterB.MoveNext();
+                    break;
+                case DIFF_STATE.NEW:
+                    hasMoreB = IterB.MoveNext();
+                    break;
+                case DIFF_STATE.DELETE:
+                    hasMoreA = IterA.MoveNext();
+                    break;
             }
         }
 
@@ -164,6 +167,11 @@ namespace Spi.Data
         {
             if (KeyCmpResult == 0 )
             {
+                if ( attributeSelector == null || attributeComparer == null )
+                {
+                    return DIFF_STATE.SAMESAME;
+                }
+
                 A attrA = attributeSelector(itemA);
                 A attrB = attributeSelector(itemB);
 

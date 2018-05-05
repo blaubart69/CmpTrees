@@ -71,36 +71,57 @@ namespace Spi.Native
         }
         */
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public struct WIN32_FIND_DATA : IEquatable<WIN32_FIND_DATA>
+        public struct FIND_DATA : IEquatable<FIND_DATA>, IComparable<FIND_DATA>, IComparer<FIND_DATA>
         {
             public uint dwFileAttributes;
             public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
             public System.Runtime.InteropServices.ComTypes.FILETIME ftLastAccessTime;
             public System.Runtime.InteropServices.ComTypes.FILETIME ftLastWriteTime;
-            public uint nFileSizeHigh;
-            public uint nFileSizeLow;
-            public uint dwReserved0;
-            public uint dwReserved1;
+            private uint nFileSizeHigh;
+            private uint nFileSizeLow;
+            private uint dwReserved0;
+            private uint dwReserved1;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
             public string cFileName;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)]
             public string cAlternateFileName;
 
+            public ulong FileSize
+            {
+                get
+                {
+                    return Misc.TwoUIntsToULong(nFileSizeHigh, nFileSizeLow);
+                }
+            }
+            public bool Equals(FIND_DATA other)
+            {
+                return
+                       dwFileAttributes == other.dwFileAttributes
+                    && EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftCreationTime, other.ftCreationTime)
+                    && EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftLastWriteTime, other.ftLastWriteTime)
+                    && nFileSizeHigh == other.nFileSizeHigh
+                    && nFileSizeLow == other.nFileSizeLow
+                    && cFileName == other.cFileName;
+            }
+            public int CompareTo(FIND_DATA other)
+            {
+                return Compare(this, other);
+            }
+            public int Compare(FIND_DATA a, FIND_DATA b)
+            {
+                int cmp;
+                if ((cmp = String.Compare(a.cFileName, b.cFileName))                != 0) return cmp;
+                if ((cmp = Misc.CompareULongsToInt(a.FileSize, b.FileSize))         != 0) return cmp;
+                if ((cmp = Misc.CmpFileTimes(a.ftCreationTime, b.ftCreationTime))   != 0) return cmp;
+                if ((cmp = Misc.CmpFileTimes(a.ftLastWriteTime, b.ftLastWriteTime)) != 0) return cmp;
+
+                return 0;
+            }
+            #region OVERRIDE
             public override bool Equals(object obj)
             {
-                return obj is WIN32_FIND_DATA && Equals((WIN32_FIND_DATA)obj);
+                return obj is FIND_DATA && Equals((FIND_DATA)obj);
             }
-
-            public bool Equals(WIN32_FIND_DATA other)
-            {
-                return EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftCreationTime, other.ftCreationTime) &&
-                       //EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftLastAccessTime, other.ftLastAccessTime) &&
-                       EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftLastWriteTime, other.ftLastWriteTime) &&
-                       nFileSizeHigh == other.nFileSizeHigh &&
-                       nFileSizeLow == other.nFileSizeLow &&
-                       cFileName == other.cFileName;
-            }
-
             public override int GetHashCode()
             {
                 var hashCode = -1111092689;
@@ -119,6 +140,9 @@ namespace Spi.Native
                 return cFileName;
             }
 
+            
+
+            #endregion
         }
 
         /*
@@ -129,11 +153,11 @@ namespace Spi.Native
         public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern SafeFindHandle FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
+        public static extern SafeFindHandle FindFirstFile(string lpFileName, out FIND_DATA lpFindFileData);
         //public static extern string FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern bool FindNextFile(SafeHandle hFindFile, out WIN32_FIND_DATA lpFindFileData);
+        public static extern bool FindNextFile(SafeHandle hFindFile, out FIND_DATA lpFindFileData);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         public static extern bool FindClose(SafeHandle hFindFile);

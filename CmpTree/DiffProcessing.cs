@@ -17,28 +17,28 @@ namespace CmpTrees
     {
         public readonly Stats _stats;
         public readonly DiffWriter _writers;
-        public readonly ConcurrentDictionary<Win32.WIN32_FIND_DATA, List<string>> newFiles;
-        public readonly ConcurrentDictionary<Win32.WIN32_FIND_DATA, List<string>> delFiles;
+        public readonly ConcurrentDictionary<Win32.FIND_DATA, List<string>> newFiles;
+        public readonly ConcurrentDictionary<Win32.FIND_DATA, List<string>> delFiles;
 
         public DiffProcessing(Stats stats, DiffWriter writers)
         {
             _stats = stats;
             _writers = writers;
-            newFiles = new ConcurrentDictionary<Win32.WIN32_FIND_DATA, List<string>>();
-            delFiles = new ConcurrentDictionary<Win32.WIN32_FIND_DATA, List<string>>();
+            newFiles = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>();
+            delFiles = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>();
         }
         /// <summary>
         /// ATTENZIONE!!!! MULTI-THREADING AHEAD!!!
         /// </summary>
-        public void DiffCallback(DIFF_STATE state, string basedir, ref Win32.WIN32_FIND_DATA find_data_a, ref Win32.WIN32_FIND_DATA find_data_b)
+        public void DiffCallback(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b)
         {
             if (state == DIFF_STATE.SAMESAME)
             {
                 return;
             }
 
-            Win32.WIN32_FIND_DATA? File_data_ToUse = null;
-            ConcurrentDictionary<Win32.WIN32_FIND_DATA, List<string>> DicToUse = null;
+            Win32.FIND_DATA? File_data_ToUse = null;
+            ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse = null;
             TextWriter toWriteTo;
             switch (state)
             {
@@ -54,7 +54,7 @@ namespace CmpTrees
                     {
                         toWriteTo = _writers.newWriter;
                         Interlocked.Increment(ref _stats.FilesNew);
-                        Interlocked.Add(ref _stats.FilesNewBytes, (long)Misc.GetFilesize(find_data_b));
+                        Interlocked.Add(ref _stats.FilesNewBytes, (long)find_data_b.FileSize);
                         File_data_ToUse = find_data_b;
                         DicToUse = newFiles;
                     }
@@ -62,7 +62,7 @@ namespace CmpTrees
                 case DIFF_STATE.MODIFY:
                     toWriteTo = _writers.modWriter;
                     Interlocked.Increment(ref _stats.FilesMod);
-                    Interlocked.Add(ref _stats.FilesModBytes, (long)Misc.GetFilesize(find_data_b) - (long)Misc.GetFilesize(find_data_a));
+                    Interlocked.Add(ref _stats.FilesModBytes, (long)find_data_b.FileSize - (long)find_data_a.FileSize);
                     File_data_ToUse = find_data_b;
                     break;
                 case DIFF_STATE.DELETE:
@@ -75,7 +75,7 @@ namespace CmpTrees
                     {
                         toWriteTo = _writers.delWriter;
                         Interlocked.Increment(ref _stats.FilesDel);
-                        Interlocked.Add(ref _stats.FilesDelBytes, (long)Misc.GetFilesize(find_data_a));
+                        Interlocked.Add(ref _stats.FilesDelBytes, (long)find_data_a.FileSize);
                         File_data_ToUse = find_data_a;
                         DicToUse = newFiles;
                     }
@@ -98,7 +98,7 @@ namespace CmpTrees
             {
                 var data = File_data_ToUse.Value;
                 toWriteTo.WriteLine(
-                      $"{Misc.GetFilesize(data)}"
+                      $"{data.FileSize}"
                     + $"\t{ConvertFiletimeToString(data.ftCreationTime, FullFilename, "creationTime")}"
                     + $"\t{ConvertFiletimeToString(data.ftLastWriteTime, FullFilename, "lastWriteTime")}"
                     + $"\t{ConvertFiletimeToString(data.ftLastAccessTime, FullFilename, "lastAccessTime")}"
