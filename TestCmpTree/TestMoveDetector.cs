@@ -60,7 +60,7 @@ namespace TestnCmpTree
             paraCmp.Start();
             Misc.WaitUtilSet(paraCmp.IsFinished, 2000, doEvery: null );
 
-            IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataMoveComparer();
+            IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataComparer_Name_Size_Modified();
             var newFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProc.newFilesDic, find_data_Comparer);
             var delFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProc.delFilesDic, find_data_Comparer);
 

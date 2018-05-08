@@ -131,7 +131,7 @@ namespace CmpTrees
                 Misc.WaitUtilSet(paraCmp.IsFinished, 2000, () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
 
-                IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataMoveComparer();
+                IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataComparer_Name_Size_Modified();
                 newFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProcessor.newFilesDic, find_data_Comparer);
                 delFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProcessor.delFilesDic, find_data_Comparer);
             }

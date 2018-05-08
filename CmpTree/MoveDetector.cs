@@ -10,27 +10,30 @@ namespace CmpTrees
 {
     public delegate void MoveFileHandler(string Filename, string MoveFromPath, string MoveToPath);
 
-    public class FindDataMoveComparer : IComparer<Win32.FIND_DATA>
+    public class FindDataComparer_Name_Size_Modified : IComparer<Win32.FIND_DATA>
     {
         public int Compare(Win32.FIND_DATA a, Win32.FIND_DATA b)
         {
-            return MoveDetector.CompareFindData(a, b);
+            return MoveDetector.CompareFindData_Name_Size_Modified(a, b);
         }
     }
 
     public class MoveDetector
     {
-        public static int CompareFindData(Win32.FIND_DATA a, Win32.FIND_DATA b)
+        public static int CompareFindData_Name_Size_Modified(Win32.FIND_DATA a, Win32.FIND_DATA b)
         {
             int cmp;
             if ((cmp = String.Compare(a.cFileName, b.cFileName)) != 0) return cmp;
-            if ((cmp = Misc.CompareULongsToInt(a.FileSize, b.FileSize)) != 0) return cmp;
+            //if ((cmp = Misc.CompareULongsToInt(a.FileSize, b.FileSize)) != 0) return cmp;
+            if ((cmp = Comparer<ulong>.Default.Compare(a.FileSize, b.FileSize)) != 0) return cmp;
             //if ((cmp = Misc.CmpFileTimes(a.ftCreationTime, b.ftCreationTime))   != 0) return cmp;
             if ((cmp = Misc.CmpFileTimes(a.ftLastWriteTime, b.ftLastWriteTime)) != 0) return cmp;
 
             return 0;
         }
-        public static void Run(SortedList<Win32.FIND_DATA, List<string>> newFiles, SortedList<Win32.FIND_DATA, List<string>> delFiles,
+        public static void Run(
+            SortedList<Win32.FIND_DATA, List<string>> newFiles, 
+            SortedList<Win32.FIND_DATA, List<string>> delFiles,
             ConsoleAndFileWriter errWriter,
             MoveFileHandler moveHandler)
         {
@@ -39,7 +42,7 @@ namespace CmpTrees
                 ListB: delFiles,
                 KeyComparer: (newFile, delFile) =>
                 {
-                    return CompareFindData(newFile.Key, delFile.Key);
+                    return CompareFindData_Name_Size_Modified(newFile.Key, delFile.Key);
                 },
                 AttributeComparer: null,
                 checkSortOrder: false,
@@ -58,14 +61,15 @@ namespace CmpTrees
         }
         private static bool FileAppearInMoreDirectories(Win32.FIND_DATA newFile, List<string> newDirs, Win32.FIND_DATA delFile, List<string> delDirs, ConsoleAndFileWriter errWriter)
         {
-            if ( newDirs.Count > 1 || delDirs.Count > 1 )
+            if ( newDirs.Count == 1 && delDirs.Count == 1 )
             {
-                return true;
+                return false;
             }
+
             WriteErrorWhenFileIsInMoreThanOneDirectory(newFile.cFileName, newDirs, "b", errWriter);
             WriteErrorWhenFileIsInMoreThanOneDirectory(delFile.cFileName, delDirs, "a", errWriter);
 
-            return false;
+            return true;
         }
         private static void WriteErrorWhenFileIsInMoreThanOneDirectory(string filename, List<string> dirs, string side, ConsoleAndFileWriter errWriter)
         {
@@ -74,7 +78,7 @@ namespace CmpTrees
                 string dirsToPrint = String.Join("\n", dirs);
                 errWriter?.WriteLine(
                     $"list [{side}]: file appears in more than one directory with same size and timestamps [{filename}]"
-                  + $"\n{dirsToPrint}");
+                  + $"\n\t{dirsToPrint}");
             }
         }
     }
