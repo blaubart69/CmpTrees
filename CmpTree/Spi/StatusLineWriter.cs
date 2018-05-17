@@ -1,44 +1,66 @@
 ﻿using System;
 using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Spi
 {
     public class StatusLineWriter
     {
-        private int PrevTextLen = -1;
-
         private readonly TextWriter tw = Console.Error;
         private static readonly string Dots = "...";
 
+        private int  _PrevTextLen = -1;
+        private bool _Console_available;
+
+        public StatusLineWriter()
+        {
+            _Console_available = true;
+            try
+            {
+                int x = Console.WindowWidth;
+            }
+            catch (Exception)
+            {
+                //Console.Error.WriteLine($"Could not format text to console. Seems Console is redirected. printing plain text. [{ex.Message}]");
+                _Console_available = false;
+            }
+        }
+
         public void Write(string Text)
         {
-            string BlanksToAppend = Text.Length < PrevTextLen ? new string(' ', PrevTextLen - Text.Length) : String.Empty;
-            tw.Write("{0}{1}\r", Text, BlanksToAppend);
-            PrevTextLen = Text.Length;
+            string TextToPrint = GetDottedText(Text);
+
+            string BlanksToAppend = TextToPrint.Length < _PrevTextLen 
+                    ? new string(' ', _PrevTextLen - TextToPrint.Length) 
+                    : String.Empty;
+
+            tw.Write("{0}{1}\r", TextToPrint, BlanksToAppend);
+
+            _PrevTextLen = TextToPrint.Length;
         }
-        public void WriteWithDots(string Text)
+        private string GetDottedText(string Text)
         {
+            if (!_Console_available)
+            {
+                return Text;
+            }
+
             int currWidth = Console.WindowWidth - 1;
+            string formattedText = Text;
 
             if (Text.Length > currWidth)
             {
-                int LenLeftPart = (currWidth - Dots.Length) / 2;
-                int LenRightPart = currWidth - Dots.Length - LenLeftPart;
+                int lenToPrint   = currWidth - Dots.Length;
+                int LenLeftPart  = lenToPrint / 2;
+                int LenRightPart = lenToPrint - LenLeftPart;
 
-                string TextToPrint = String.Format("{0}{1}{2}\r",
+                formattedText = String.Format("{0}{1}{2}",
                     Text.Substring(0, LenLeftPart),
                     Dots,
                     Text.Substring(Text.Length - LenRightPart, LenRightPart)
                     );
-                Write(TextToPrint);
             }
-            else
-            {
-                Write(Text);
-            }
+
+            return formattedText;
         }
     }
 }

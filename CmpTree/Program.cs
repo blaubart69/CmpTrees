@@ -145,10 +145,10 @@ namespace CmpTrees
             }
             catch { }
 
-            string privMem = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
-            string threadcount = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
+            string privMem      = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
+            string threadcount  = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
-            statWriter.WriteWithDots($"dirs queued/running/done: {queued}/{running}/{cmpsDone}"
+            statWriter.Write($"dirs queued/running/done: {queued}/{running}/{cmpsDone}"
                 + $" | new/mod/del: {stats.FilesNew}/{stats.FilesMod}/{stats.FilesDel}"
                 + $" | GC.Total: {Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))}"
                 + $" | PrivateMemory: {privMem}"
@@ -176,14 +176,21 @@ namespace CmpTrees
         {
             new Thread(new ThreadStart(() =>
             {
-                while (true)
+                try
                 {
-                    if (Console.ReadKey().KeyChar == 'q')
+                    while (true)
                     {
-                        Console.Error.WriteLine("\ngoing down...\n");
-                        CtrlCPressed.Set();
-                        break;
+                        if (Console.ReadKey().KeyChar == 'q')
+                        {
+                            Console.Error.WriteLine("\ngoing down...\n");
+                            CtrlCPressed.Set();
+                            break;
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"something is wrong in the thread waiting for 'q' to be pressed.\n[{ex.Message}]");
                 }
             }))
             { IsBackground = true }.Start();
