@@ -8,72 +8,37 @@ namespace Spi
 {
     public class StatusLineWriter
     {
-        private DateTime LastWrite = new DateTime(0);
         private int PrevTextLen = -1;
 
         private readonly TextWriter tw = Console.Error;
-        private readonly TimeSpan TimeSpanForWriting = new TimeSpan(hours: 0, minutes: 0, seconds: 1);
+        private static readonly string Dots = "...";
 
-        private void _internal_WriteSimple(string Text)
+        public void Write(string Text)
         {
-            if (Text.Length < PrevTextLen)
-            {
-                string BlanksToDelete = new string(' ', PrevTextLen - Text.Length);
-                tw.Write("{0}{1}\r", Text, BlanksToDelete);
-            }
-            else
-            {
-                tw.Write("{0}\r", Text);
-            }
+            string BlanksToAppend = Text.Length < PrevTextLen ? new string(' ', PrevTextLen - Text.Length) : String.Empty;
+            tw.Write("{0}{1}\r", Text, BlanksToAppend);
             PrevTextLen = Text.Length;
-        }
-        public void WriteSimple(string Text)
-        {
-            if (!HasTimespanPassed(this.TimeSpanForWriting))
-            {
-                return;
-            }
-            _internal_WriteSimple(Text);
         }
         public void WriteWithDots(string Text)
         {
-            if ( ! HasTimespanPassed(this.TimeSpanForWriting) )
+            int currWidth = Console.WindowWidth - 1;
+
+            if (Text.Length > currWidth)
             {
-                return;
-            }
+                int LenLeftPart = (currWidth - Dots.Length) / 2;
+                int LenRightPart = currWidth - Dots.Length - LenLeftPart;
 
-            const string Dots = "...";
-
-            if (Text.Length > Console.WindowWidth)
-            {
-                int LenLeftPart = (Console.WindowWidth - Dots.Length) / 2;
-                int LenRightPart = Console.WindowWidth - Dots.Length - LenLeftPart;
-
-                tw.Write("{0}{1}{2}\r",
+                string TextToPrint = String.Format("{0}{1}{2}\r",
                     Text.Substring(0, LenLeftPart),
                     Dots,
                     Text.Substring(Text.Length - LenRightPart, LenRightPart)
                     );
+                Write(TextToPrint);
             }
             else
             {
-                _internal_WriteSimple(Text);
+                Write(Text);
             }
-
-            PrevTextLen = Text.Length;
-        }
-        private bool HasTimespanPassed(TimeSpan tsMustHavePassed)
-        {
-            DateTime Now = DateTime.Now;
-
-            bool hasPassed = new TimeSpan(Now.Ticks - LastWrite.Ticks) > tsMustHavePassed;
-            
-            if ( hasPassed )
-            {
-                LastWrite = Now;
-            }
-
-            return hasPassed;
         }
     }
 }
