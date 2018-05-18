@@ -9,7 +9,7 @@ using Spi.Data;
 namespace CmpTrees
 {
     public delegate void ErrorHandler(int RetCode, string Message);
-    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b);
+    public delegate void DiffHandler(DIFF_STATE state, string basedir, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b);
     
     class ParallelCtx
     {
@@ -103,6 +103,11 @@ namespace CmpTrees
         }
         private void QueueOneDirForCompare(string dirSinceRootDir, int currDepth)
         {
+//#if DEBUG
+//            Console.WriteLine("QueueOneDirForCompare: [{0}]", dirSinceRootDir, _RootDirA, _RootDirB);
+//#endif
+
+
             Interlocked.Increment(ref _EnumerationsQueued);
 
             bool startNewThread = false;
@@ -192,10 +197,18 @@ namespace CmpTrees
             string FullA = BuildFullDirName(_RootDirA, dirToSearchSinceRootDir);
             string FullB = BuildFullDirName(_RootDirB, dirToSearchSinceRootDir);
 
+#if DEBUG
+            Console.WriteLine("cmpdir: base [{0}]\ta [{1}]\tb [{2}]", dirToSearchSinceRootDir, _RootDirA, _RootDirB);
+#endif
+
             CmpDirs.Run(FullA, FullB,
                 (DIFF_STATE diffstate, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b) =>
                 {
-                    GetDirToEnum(diffstate, ref find_data_a, ref find_data_b, out string newDirToEnum, out uint attrs);
+#if DEBUG
+                    Console.WriteLine("state: {0}\ta [{1}]\tb [{2}]", diffstate.ToString(), find_data_a.ToString(), find_data_b.ToString());
+#endif
+
+                    GetDirToEnum(diffstate, find_data_a, find_data_b, out string newDirToEnum, out uint attrs);
 
                     if (newDirToEnum != null && WalkIntoDir(attrs, _opts.followJunctions, depth, _opts.maxDepth))
                     {
@@ -205,13 +218,13 @@ namespace CmpTrees
                     {
                         
                     }
-                    _diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
+                    _diffHandler(diffstate, dirToSearchSinceRootDir, find_data_a, find_data_b);
                 },
                 _errorHandler,
                 _CtrlCEvent);
         }
 
-        private static void GetDirToEnum(DIFF_STATE state, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
+        private static void GetDirToEnum(DIFF_STATE state, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
         {
             newDirToEnum = null;
             attrs = 0;
@@ -220,10 +233,15 @@ namespace CmpTrees
                 newDirToEnum    = find_data_b.cFileName;
                 attrs           = find_data_b.dwFileAttributes;
             }
-            else if (Spi.Misc.IsDirectoryFlagSet(find_data_a))
+            else if (state == DIFF_STATE.DELETE && Spi.Misc.IsDirectoryFlagSet(find_data_a))
             {
-                newDirToEnum    = find_data_a.cFileName;
-                attrs           = find_data_a.dwFileAttributes;
+                newDirToEnum = find_data_a.cFileName;
+                attrs        = find_data_a.dwFileAttributes;
+            }
+            else if (state == DIFF_STATE.SAMESAME && Spi.Misc.IsDirectoryFlagSet(find_data_a) && Spi.Misc.IsDirectoryFlagSet(find_data_b))
+            {
+                newDirToEnum = find_data_a.cFileName;
+                attrs = find_data_a.dwFileAttributes;
             }
         }
 
@@ -239,12 +257,6 @@ namespace CmpTrees
                 dirToEnumerate = Path.Combine(RootDir, dir);
             }
             return dirToEnumerate;
-        }
-        public void GetCounter(out ulong queued, out ulong running, out ulong done)
-        {
-            queued = (ulong)_EnumerationsQueued;
-            running = (ulong)_EnumerationsRunning;
-            done = (ulong)_ComparesDone;
         }
         private static bool WalkIntoDir(uint dwFileAttributes, bool FollowJunctions, int currDepth, int maxDepth)
         {

@@ -71,7 +71,7 @@ namespace Spi.Native
         }
         */
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public struct FIND_DATA
+        public struct FIND_DATA : IEquatable<FIND_DATA>
         {
             public uint dwFileAttributes;
             public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
@@ -121,6 +121,7 @@ namespace Spi.Native
                 hashCode = hashCode * -1521134295 + nFileSizeHigh.GetHashCode();
                 hashCode = hashCode * -1521134295 + nFileSizeLow.GetHashCode();
                 hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(cFileName);
+                hashCode = hashCode * -1521134295 + dwFileAttributes.GetHashCode();
                 return hashCode;
             }
 
@@ -129,7 +130,22 @@ namespace Spi.Native
                 return cFileName;
             }
 
-            
+            public override bool Equals(object obj)
+            {
+                return obj is FIND_DATA && Equals((FIND_DATA)obj);
+            }
+
+            public bool Equals(FIND_DATA other)
+            {
+                return dwFileAttributes == other.dwFileAttributes &&
+                       EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftLastWriteTime, other.ftLastWriteTime) &&
+                       nFileSizeHigh == other.nFileSizeHigh &&
+                       nFileSizeLow == other.nFileSizeLow &&
+                       cFileName == other.cFileName &&
+                       FileSize == other.FileSize;
+            }
+
+
 
             #endregion
         }

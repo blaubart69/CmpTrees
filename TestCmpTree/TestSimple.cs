@@ -38,7 +38,7 @@ namespace TestnCmpTree
             bool diff = false;
 
             var c = new CmpTrees.CmpDirsParallel(dira, dirb, new CmpTrees.EnumOptions(),
-                (DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b) => { diff = true; },
+                (DIFF_STATE state, string basedir, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b) => { diff = true; },
                 (rc, msg) => { error = true; },
                 new ManualResetEvent(false));
             c.Start();
@@ -99,7 +99,7 @@ namespace TestnCmpTree
             List<DiffData> result = new List<DiffData>();
 
             var c = new CmpTrees.CmpDirsParallel(dira, dirb, new CmpTrees.EnumOptions(),
-                (DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b) =>
+                (DIFF_STATE state, string basedir, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b) =>
                 {
                     result.Add(new DiffData(state, basedir, find_data_a, find_data_b));
                 },

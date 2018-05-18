@@ -7,11 +7,32 @@ namespace CmpTrees
 {
     public delegate void MoveFileHandler(string Filename, string MoveFromPath, string MoveToPath, ulong Filesize);
 
-    public class FindDataComparer_Name_Size_Modified : IComparer<Win32.FIND_DATA>
+    public class FindDataComparer_Name_Size_Modified : IComparer<Win32.FIND_DATA>, IEqualityComparer<Win32.FIND_DATA>
     {
         public int Compare(Win32.FIND_DATA a, Win32.FIND_DATA b)
         {
             return MoveDetector.CompareFindData_Name_Size_Modified(a, b);
+        }
+
+        public bool Equals(Win32.FIND_DATA x, Win32.FIND_DATA y)
+        {
+            return
+                x.dwFileAttributes == y.dwFileAttributes
+             && EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(x.ftLastWriteTime, y.ftLastWriteTime)
+             && x.FileSize == y.FileSize
+             && x.cFileName == y.cFileName;
+        }
+
+        public int GetHashCode(Win32.FIND_DATA find_data)
+        {
+            var hashCode = -1111092689;
+
+            hashCode = hashCode * -1521134295 + EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.GetHashCode(find_data.ftLastWriteTime);
+            hashCode = hashCode * -1521134295 + find_data.FileSize.GetHashCode();
+            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(find_data.cFileName);
+            hashCode = hashCode * -1521134295 + find_data.dwFileAttributes.GetHashCode();
+
+            return hashCode;
         }
     }
 
@@ -75,7 +96,7 @@ namespace CmpTrees
                 string dirsToPrint = String.Join("\n", dirs);
                 errWriter?.WriteLine(
                     $"list [{side}]: file appears in more than one directory with same size and timestamps [{filename}]"
-                  + $"\n\t{dirsToPrint}");
+                  + $"\n{dirsToPrint}");
             }
         }
     }
