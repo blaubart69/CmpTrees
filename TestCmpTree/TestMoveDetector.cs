@@ -67,7 +67,7 @@ namespace TestnCmpTree
             List<MoveEntry> result = new List<MoveEntry>();
 
             MoveDetector.Run(newFiles: newFiles, delFiles: delFiles, errWriter: null,
-                moveHandler: (filename, from, to) =>
+                moveHandler: (filename, from, to, filesize) =>
                 {
                     result.Add(new MoveEntry(filename, from, to));
                 });

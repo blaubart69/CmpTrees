@@ -89,15 +89,18 @@ namespace CmpTrees
         {
             using (var writer = new StreamWriter(@".\moved.txt", append: false, encoding: Encoding.UTF8))
             {
-                Console.Out.WriteLine("detecting possible moves...");
+                Console.Error.Write("detecting possible moves...\r");
                 ulong possibleFileMoves = 0;
+                ulong possibleFileMovesFileSizes = 0;
                 MoveDetector.Run(newFiles, delFiles, errWriter,
-                    (filename, FromDir, ToDir) =>
+                    (filename, FromDir, ToDir, filesize) =>
                     {
                         possibleFileMoves += 1;
+                        possibleFileMovesFileSizes += filesize;
                         writer.WriteLine($"{filename}\t{FromDir}\t{ToDir}");
                     });
-                Console.Out.WriteLine($"{possibleFileMoves} possible moves of files found.");
+                Console.Out.WriteLine(
+                $"moved files\t{possibleFileMoves,12:N0}\t{Misc.GetPrettyFilesize(possibleFileMovesFileSizes)}");
             }
         }
 
@@ -156,17 +159,17 @@ namespace CmpTrees
         }
         private static void WriteStatistics(TimeSpan ProgramDuration, long comparesDone, Stats stats)
         {
-            Console.Error.WriteLine($"\n{comparesDone} dirs compared in {Spi.Misc.NiceDuration(ProgramDuration)}");
+            Console.Out.Write($"\n{comparesDone:N0} dirs compared in {Spi.Misc.NiceDuration(ProgramDuration)}");
             if (ProgramDuration.Ticks > 0)
             {
                 double cmpsPerMilli = (double)comparesDone / (double)ProgramDuration.TotalMilliseconds;
-                Console.Error.WriteLine("{0:0.##} cmp/s | {1:0.##} cmp/m | {2:0.##} cmp/h",
+                Console.Out.Write(" ({0:0.##} cmp/s | {1:0.##} cmp/m | {2:0.##} cmp/h)",
                     cmpsPerMilli * 1000,
                     cmpsPerMilli * 1000 * 60,
                     cmpsPerMilli * 1000 * 60 * 60);
             }
-            Console.Error.WriteLine(
-                $"\nnew files\t{stats.FilesNew,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesNewBytes)}"
+            Console.Out.WriteLine(
+              $"\n\nnew files\t{stats.FilesNew,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesNewBytes)}"
               + $"\nmod files\t{stats.FilesMod,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesModBytes)}"
               + $"\ndel files\t{stats.FilesDel,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesDelBytes)}"
               + $"\nnew dirs \t{stats.DirsNew,12:N0}"

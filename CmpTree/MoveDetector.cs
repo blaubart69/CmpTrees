@@ -5,7 +5,7 @@ using Spi.Native;
 
 namespace CmpTrees
 {
-    public delegate void MoveFileHandler(string Filename, string MoveFromPath, string MoveToPath);
+    public delegate void MoveFileHandler(string Filename, string MoveFromPath, string MoveToPath, ulong Filesize);
 
     public class FindDataComparer_Name_Size_Modified : IComparer<Win32.FIND_DATA>
     {
@@ -53,7 +53,7 @@ namespace CmpTrees
                     {
                         return;
                     }
-                    moveHandler(newFile.Key.cFileName, delFile.Value[0], newFile.Value[0]);
+                    moveHandler(newFile.Key.cFileName, delFile.Value[0], newFile.Value[0], newFile.Key.FileSize);
                 });
         }
         private static bool FileAppearInMoreDirectories(Win32.FIND_DATA newFile, List<string> newDirs, Win32.FIND_DATA delFile, List<string> delDirs, ConsoleAndFileWriter errWriter)
