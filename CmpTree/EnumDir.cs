@@ -6,15 +6,18 @@ using System.Runtime.InteropServices;
 
 
 using Spi.Native;
+using System.Text;
 
 namespace CmpTrees
 {
     public class EnumDir
     {
-        public static IEnumerable<Spi.Native.Win32.FIND_DATA> Entries(string FullDirname, ErrorHandler errorHandler)
+        public static IEnumerable<Spi.Native.Win32.FIND_DATA> Entries(StringBuilder FullDirname, ErrorHandler errorHandler)
         {
-            using (SafeFindHandle SearchHandle = Win32.FindFirstFile(FullDirname + "\\*", out Win32.FIND_DATA find_data))
+            FullDirname.Append("\\*");
+            using (SafeFindHandle SearchHandle = Win32.FindFirstFile(FullDirname.ToString(), out Win32.FIND_DATA find_data))
             {
+                FullDirname.Length -= 2;
                 if (SearchHandle.IsInvalid)
                 {
                     int LastWinError = Marshal.GetLastWin32Error();

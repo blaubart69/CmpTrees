@@ -5,12 +5,13 @@ using System.Threading;
 using Spi.Native;
 using Spi.Data;
 using Spi;
+using System.Text;
 
 namespace CmpTrees
 {
     class CmpDirs
     {
-        public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, ErrorHandler errorHandler)
+        public static void Run(StringBuilder dira, StringBuilder dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, ErrorHandler errorHandler)
         {
             IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.Entries(dira, errorHandler);
             IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.Entries(dirb, errorHandler);

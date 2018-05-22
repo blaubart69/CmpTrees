@@ -135,24 +135,30 @@ namespace Spi.Native
         public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern SafeFindHandle FindFirstFile(string lpFileName, out FIND_DATA lpFindFileData);
         //public static extern string FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern bool FindNextFile(SafeHandle hFindFile, out FIND_DATA lpFindFileData);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern bool FindClose(SafeHandle hFindFile);
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern uint GetFileAttributes(string lpFileName);
 
         [DllImport("Shlwapi.dll", CharSet = CharSet.Unicode)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern long StrFormatByteSize(
                 long fileSize
                 , [MarshalAs(UnmanagedType.LPTStr)] StringBuilder buffer
                 , int bufferSize);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern SafeFileHandle CreateFileW(
              [MarshalAs(UnmanagedType.LPWStr)]  string          filename,
                                                 EFileAccess     access,
@@ -164,6 +170,7 @@ namespace Spi.Native
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern bool CreateDirectoryW(string lpPathName,IntPtr lpSecurityAttributes);
 
         public static bool SetFileTime(IntPtr hFile, System.Runtime.InteropServices.ComTypes.FILETIME lpCreationTime, System.Runtime.InteropServices.ComTypes.FILETIME lpLastAccessTime, System.Runtime.InteropServices.ComTypes.FILETIME lpLastWriteTime)
@@ -182,19 +189,24 @@ namespace Spi.Native
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern bool SetFileTime(IntPtr hFile, ref long lpCreationTime, ref long lpLastAccessTime, ref long lpLastWriteTime);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern bool FileTimeToSystemTime(ref System.Runtime.InteropServices.ComTypes.FILETIME ft, out SYSTEMTIME st);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern bool FileTimeToLocalFileTime(ref System.Runtime.InteropServices.ComTypes.FILETIME ftin, ref System.Runtime.InteropServices.ComTypes.FILETIME ftout);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SystemTimeToTzSpecificLocalTime(IntPtr lpTimeZoneInformation, [In] ref SYSTEMTIME lpUniversalTime, out SYSTEMTIME lpLocalTime);
 
         [DllImport("kernel32.dll", SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SystemTimeToFileTime(ref SYSTEMTIME st, out System.Runtime.InteropServices.ComTypes.FILETIME ft);
 

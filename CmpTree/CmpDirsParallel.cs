@@ -5,13 +5,14 @@ using System.Collections.Generic;
 
 using Spi.Native;
 using Spi.Data;
+using System.Text;
 
 namespace CmpTrees
 {
     public delegate void ErrorHandler(int RetCode, string Message);
     public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b);
     
-    class ParallelCtx
+    struct ParallelCtx
     {
         public readonly int       depth;
         public readonly string    dirToSearchSinceRootDir;
@@ -148,10 +149,13 @@ namespace CmpTrees
         {
             try
             {
+                StringBuilder DirA = new StringBuilder(_RootDirA);
+                StringBuilder DirB = new StringBuilder(_RootDirB);
+
                 Interlocked.Increment(ref _EnumerationsRunning);
                 while (true)
                 {
-                    ParallelCtx ctx = null;
+                    ParallelCtx? ctx = null;
                     lock (_workItems)
                     {
                         if ( _workItems.Count == 0 )
@@ -166,8 +170,10 @@ namespace CmpTrees
                         {
                             break;
                         }
-
-                        CompareTwoDirectories(ctx.dirToSearchSinceRootDir, ctx.depth);
+                        if (ctx.HasValue)
+                        {
+                            CompareTwoDirectories(ctx.Value.dirToSearchSinceRootDir, ctx.Value.depth, DirA, DirB);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -197,41 +203,37 @@ namespace CmpTrees
             }
         }
 
-        private void CompareTwoDirectories(string dirToSearchSinceRootDir, int depth)
+        private void CompareTwoDirectories(string dirToSearchSinceRootDir, int depth, StringBuilder DirA, StringBuilder DirB)
         {
+            /*
             string FullA = BuildFullDirName(_RootDirA, dirToSearchSinceRootDir);
             string FullB = BuildFullDirName(_RootDirB, dirToSearchSinceRootDir);
+            */
+            AppendSearchDir(ref DirA, dirToSearchSinceRootDir);
+            AppendSearchDir(ref DirB, dirToSearchSinceRootDir);
 
-#if DEBUG
-            Console.WriteLine("cmpdir: base [{0}]\ta [{1}]\tb [{2}]", dirToSearchSinceRootDir, _RootDirA, _RootDirB);
-#endif
-
-            CmpDirs.Run(FullA, FullB,
+            CmpDirs.Run(DirA, DirB,
                 (DIFF_STATE diffstate, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b) =>
                 {
-#if DEBUG
-                    Console.WriteLine("state: {0}\ta [{1}]\tb [{2}]", diffstate.ToString(), find_data_a.ToString(), find_data_b.ToString());
-#endif
-
-                    GetDirToEnum(diffstate, find_data_a, find_data_b, out string newDirToEnum, out uint attrs);
+                    GetDirToEnum(diffstate, ref find_data_a, ref find_data_b, out string newDirToEnum, out uint attrs);
 
                     if (newDirToEnum != null && WalkIntoDir(attrs, _opts.followJunctions, depth, _opts.maxDepth))
                     {
                         QueueOneDirForCompare(dirToSearchSinceRootDir == null ? newDirToEnum : Path.Combine(dirToSearchSinceRootDir, newDirToEnum), depth);
                     }
-                    else
-                    {
-                        
-                    }
+
                     if (diffstate != DIFF_STATE.SAMESAME)
                     {
                         _diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
                     }
                 },
                 _errorHandler);
+
+            DirA.Length = _RootDirA.Length;
+            DirB.Length = _RootDirB.Length;
         }
 
-        private static void GetDirToEnum(DIFF_STATE state, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
+        private static void GetDirToEnum(DIFF_STATE state, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
         {
             newDirToEnum = null;
             attrs = 0;
@@ -251,7 +253,15 @@ namespace CmpTrees
                 attrs = find_data_a.dwFileAttributes;
             }
         }
-
+        private static void AppendSearchDir(ref StringBuilder dir, string dirToAppend)
+        {
+            if ( !String.IsNullOrEmpty(dirToAppend) )
+            {
+                dir.Append('\\');
+                dir.Append(dirToAppend);
+            }
+        }
+        /*
         private static string BuildFullDirName(string RootDir, string dir)
         {
             string dirToEnumerate;
@@ -265,6 +275,7 @@ namespace CmpTrees
             }
             return dirToEnumerate;
         }
+        */
         private static bool WalkIntoDir(uint dwFileAttributes, bool FollowJunctions, int currDepth, int maxDepth)
         {
             bool enterDir = true;
