@@ -64,6 +64,7 @@ namespace CmpTrees
                 },
                 AttributeComparer: null,
                 checkSortOrder: false,
+                ReportSameSame: true,
                 OnCompared: (state, newFile, delFile) =>
                 {
                     if ( state != Spi.Data.DIFF_STATE.SAMESAME )

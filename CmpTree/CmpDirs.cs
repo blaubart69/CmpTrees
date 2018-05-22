@@ -10,20 +10,16 @@ namespace CmpTrees
 {
     class CmpDirs
     {
-        public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, ErrorHandler errorHandler, ManualResetEvent Cancel)
+        public static void Run(string dira, string dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, ErrorHandler errorHandler)
         {
-            IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.Entries(dira, errorHandler, Cancel);
-            IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.Entries(dirb, errorHandler, Cancel);
-
-            if ( Cancel.WaitOne(0) )
-            {
-                return;
-            }
+            IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.Entries(dira, errorHandler);
+            IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.Entries(dirb, errorHandler);
 
             Spi.Data.DiffSortedLists.Run<Win32.FIND_DATA>(
                 ListA: sortedItemsA,
                 ListB: sortedItemsB,
                 checkSortOrder: true,
+                ReportSameSame: true,
                 OnCompared: DiffCallback,
                 KeyComparer: (a,b) =>
                 {

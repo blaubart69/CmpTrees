@@ -73,18 +73,18 @@ namespace Spi.Native
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         public struct FIND_DATA : IEquatable<FIND_DATA>
         {
-            public uint dwFileAttributes;
-            public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
-            public System.Runtime.InteropServices.ComTypes.FILETIME ftLastAccessTime;
-            public System.Runtime.InteropServices.ComTypes.FILETIME ftLastWriteTime;
-            private uint nFileSizeHigh;
-            private uint nFileSizeLow;
-            private uint dwReserved0;
-            private uint dwReserved1;
+            public readonly uint dwFileAttributes;
+            public readonly System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
+            public readonly System.Runtime.InteropServices.ComTypes.FILETIME ftLastAccessTime;
+            public readonly System.Runtime.InteropServices.ComTypes.FILETIME ftLastWriteTime;
+            private readonly uint nFileSizeHigh;
+            private readonly uint nFileSizeLow;
+            private readonly uint dwReserved0;
+            private readonly uint dwReserved1;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
-            public string cFileName;
+            public readonly string cFileName;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)]
-            public string cAlternateFileName;
+            public readonly string cAlternateFileName;
 
             public ulong FileSize
             {
@@ -93,23 +93,6 @@ namespace Spi.Native
                     return Misc.TwoUIntsToULong(nFileSizeHigh, nFileSizeLow);
                 }
             }
-            /*
-            public bool Equals(FIND_DATA other)
-            {
-                return
-                       dwFileAttributes == other.dwFileAttributes
-                    //&& EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftCreationTime, other.ftCreationTime)
-                    && EqualityComparer<System.Runtime.InteropServices.ComTypes.FILETIME>.Default.Equals(ftLastWriteTime, other.ftLastWriteTime)
-                    && nFileSizeHigh == other.nFileSizeHigh
-                    && nFileSizeLow == other.nFileSizeLow
-                    && cFileName == other.cFileName;
-            }
-            
-            public override bool Equals(object obj)
-            {
-                return obj is FIND_DATA && Equals((FIND_DATA)obj);
-            }
-            */
             #region OVERRIDE
             public override int GetHashCode()
             {
@@ -124,17 +107,14 @@ namespace Spi.Native
                 hashCode = hashCode * -1521134295 + dwFileAttributes.GetHashCode();
                 return hashCode;
             }
-
             public override string ToString()
             {
                 return cFileName;
             }
-
             public override bool Equals(object obj)
             {
                 return obj is FIND_DATA && Equals((FIND_DATA)obj);
             }
-
             public bool Equals(FIND_DATA other)
             {
                 return dwFileAttributes == other.dwFileAttributes &&
@@ -144,9 +124,6 @@ namespace Spi.Native
                        cFileName == other.cFileName &&
                        FileSize == other.FileSize;
             }
-
-
-
             #endregion
         }
 

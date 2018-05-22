@@ -18,6 +18,7 @@ namespace Spi.Data
             Func<T, T, int> KeyComparer,
             Func<T, T, int> AttributeComparer,
             Action<DIFF_STATE, T, T> OnCompared,
+            bool ReportSameSame,
             bool checkSortOrder)
         {
             return
@@ -28,6 +29,7 @@ namespace Spi.Data
                 AttributeComparer:  AttributeComparer,
                 OnCompared:         (state, a, b, ctx) => OnCompared(state, a, b), 
                 checkSortOrder:     checkSortOrder,
+                ReportSameSame:     ReportSameSame,
                 context:            null);
         }
         public static uint DiffSortedEnumerables<T,C>(
@@ -47,6 +49,7 @@ namespace Spi.Data
                 AttributeComparer: AttributeComparer,
                 OnCompared: OnCompared,
                 checkSortOrder: checkSortOrder,
+                ReportSameSame: true,
                 context: diffContext);
         }
 
@@ -65,7 +68,8 @@ namespace Spi.Data
                     ListA, ListB, KeySelector, KeyComparer, AttributeSelector, AttributeComparer,
                     (state, a, b, ctx) => OnCompared(state, a, b), 
                     checkSortorder,
-                    null);
+                    ReportSameSame: true,
+                    context: null);
         }
         private static uint _internal_DiffSortedEnumerables<T, K, A, C> (
             IEnumerable<T>                  ListA, 
@@ -76,6 +80,7 @@ namespace Spi.Data
             Func<A,A,int>                   AttributeComparer,
             Action<DIFF_STATE, T, T, C>     OnCompared,
             bool                            checkSortOrder,
+            bool                            ReportSameSame,
             C                               context)
         {
             if (KeyComparer         == null) throw new ArgumentNullException(nameof(KeyComparer));
@@ -101,7 +106,10 @@ namespace Spi.Data
                     if (hasMoreA && hasMoreB)
                     {
                         DeltaState = ItemCompareFunc(KeyComparer(keyA, keyB), IterA.Current, IterB.Current, AttributeSelector, AttributeComparer);
-                        OnCompared(DeltaState, IterA.Current, IterB.Current, context);
+                        if (DeltaState != DIFF_STATE.SAMESAME || ReportSameSame )
+                        {
+                            OnCompared(DeltaState, IterA.Current, IterB.Current, context);
+                        }
                         LastKeyA = keyA;
                         LastKeyB = keyB;
                     }

@@ -29,13 +29,8 @@ namespace CmpTrees
         /// <summary>
         /// ATTENZIONE!!!! MULTI-THREADING AHEAD!!!
         /// </summary>
-        public void DiffCallback(DIFF_STATE state, string basedir, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b)
+        public void DiffCallback(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b)
         {
-            if (state == DIFF_STATE.SAMESAME)
-            {
-                return;
-            }
-
             Win32.FIND_DATA? File_Data_ToUse = null;
             Win32.FIND_DATA? File_Data_NewDel = null;
             char? NewOrDel = null;

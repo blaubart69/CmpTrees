@@ -9,7 +9,7 @@ using Spi.Data;
 namespace CmpTrees
 {
     public delegate void ErrorHandler(int RetCode, string Message);
-    public delegate void DiffHandler(DIFF_STATE state, string basedir, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b);
+    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b);
     
     class ParallelCtx
     {
@@ -162,6 +162,11 @@ namespace CmpTrees
                     }
                     try
                     {
+                        if ( _CtrlCEvent.WaitOne(0) )
+                        {
+                            break;
+                        }
+
                         CompareTwoDirectories(ctx.dirToSearchSinceRootDir, ctx.depth);
                     }
                     catch (Exception ex)
@@ -218,10 +223,12 @@ namespace CmpTrees
                     {
                         
                     }
-                    _diffHandler(diffstate, dirToSearchSinceRootDir, find_data_a, find_data_b);
+                    if (diffstate != DIFF_STATE.SAMESAME)
+                    {
+                        _diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
+                    }
                 },
-                _errorHandler,
-                _CtrlCEvent);
+                _errorHandler);
         }
 
         private static void GetDirToEnum(DIFF_STATE state, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
