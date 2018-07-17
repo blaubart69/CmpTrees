@@ -10,6 +10,9 @@ namespace Spi.Data
         DELETE,
         SAMESAME
     }
+
+    public delegate void OnCompared<T>(DIFF_STATE state, ref T a, ref T b);
+
     public class DiffSortedLists
     {
         public static uint Run<T>(

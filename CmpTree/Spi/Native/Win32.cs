@@ -139,13 +139,26 @@ namespace Spi.Native
         public static extern SafeFindHandle FindFirstFile(string lpFileName, out FIND_DATA lpFindFileData);
         //public static extern string FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
 
+        [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "FindFirstFileW")]
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        public static extern IntPtr FindFirstFile_IntPtr(string lpFileName, ref FIND_DATA lpFindFileData);
+
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern bool FindNextFile(SafeHandle hFindFile, out FIND_DATA lpFindFileData);
 
+        [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "FindNextFileW")]
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        public static extern bool FindNextFile_IntPtr(IntPtr hFindFile, ref FIND_DATA lpFindFileData);
+
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern bool FindClose(SafeHandle hFindFile);
+
+        [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "FindClose")]
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        public static extern bool FindClose_IntPtr(IntPtr hFindFile);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern uint GetFileAttributes(string lpFileName);

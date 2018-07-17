@@ -49,5 +49,45 @@ namespace CmpTrees
                 }
             }
         }
+        public static IEnumerable<Spi.Native.Win32.FIND_DATA> Entries_IntPtr(StringBuilder FullDirname, ErrorHandler errorHandler)
+        {
+            Win32.FIND_DATA find_data = new Win32.FIND_DATA();
+
+            FullDirname.Append("\\*");
+            IntPtr SearchHandle = Win32.FindFirstFile_IntPtr(FullDirname.ToString(), ref find_data);
+            FullDirname.Length -= 2;
+
+            if (SearchHandle == Win32.INVALID_HANDLE_VALUE)
+            {
+                int LastWinError = Marshal.GetLastWin32Error();
+                if (LastWinError == Win32.ERROR_PATH_NOT_FOUND || LastWinError == Win32.ERROR_DIRECTORY)
+                {
+                    yield break;
+                }
+                else
+                {
+                    errorHandler?.Invoke(LastWinError, "FindFirstFile, " + FullDirname);
+                }
+            }
+            else
+            {
+                do
+                {
+                    if (Spi.Misc.IsDotOrDotDotDirectory(find_data.cFileName))
+                    {
+                        continue;
+                    }
+                    yield return find_data;
+                }
+                while (Win32.FindNextFile_IntPtr(SearchHandle, ref find_data));
+
+                if (Marshal.GetLastWin32Error() != Win32.ERROR_NO_MORE_FILES)
+                {
+                    errorHandler?.Invoke(Marshal.GetLastWin32Error(), "FindNextFile, " + FullDirname);
+                }
+            }
+
+            Win32.FindClose_IntPtr(SearchHandle);
+        }
     }
 }

@@ -13,8 +13,8 @@ namespace CmpTrees
     {
         public static void Run(StringBuilder dira, StringBuilder dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, ErrorHandler errorHandler)
         {
-            IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.Entries(dira, errorHandler);
-            IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.Entries(dirb, errorHandler);
+            IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.Entries_IntPtr(dira, errorHandler);
+            IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.Entries_IntPtr(dirb, errorHandler);
 
             Spi.Data.DiffSortedLists.Run<Win32.FIND_DATA>(
                 ListA: sortedItemsA,
@@ -42,12 +42,13 @@ namespace CmpTrees
                     {
                         return 0;
                     }
+
                     long cmp;
-                    if ((cmp = CmpFileTimes(a.ftLastWriteTime, b.ftLastWriteTime)) != 0)
+                    if ((cmp = (long)(a.FileSize - b.FileSize)) != 0)
                     {
                         return (int)cmp;
                     }
-                    if ((cmp = (long)(a.FileSize - b.FileSize) ) != 0)
+                    if ((cmp = CmpFileTimes(a.ftLastWriteTime, b.ftLastWriteTime)) != 0)
                     {
                         return (int)cmp;
                     }
