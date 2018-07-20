@@ -206,7 +206,9 @@ namespace Spi.Data
             {
                 throw new ApplicationException(
                     String.Format(
-                        "Sortorder not given in list [{0}]. Last item is greater than current item. Last [{1}] > [{2}] (current)",
+                        "Sortorder not given in list [{0}]. Last item is greater than current item."
+                      + "\nLast    [{1}]"
+                      + "\n > Curr [{2}]",
                         WhichList,
                         lastKey.ToString(),
                         currentKey.ToString()));

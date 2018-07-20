@@ -35,6 +35,8 @@ namespace CmpTrees
         public bool FollowJunctions = false;
         public int Depth = -1;
         public int MaxThreads = 32;
+        public bool forceSortA = false;
+        public bool forceSortB = false;
     }
     class Program
     {
@@ -116,7 +118,9 @@ namespace CmpTrees
                 var enumOpts = new EnumOptions()
                 {
                     followJunctions = opts.FollowJunctions,
-                    maxDepth = opts.Depth
+                    maxDepth = opts.Depth,
+                    forceSortA = opts.forceSortA,
+                    forceSortB = opts.forceSortB
                 };
 
                 DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters);
@@ -212,11 +216,13 @@ namespace CmpTrees
             bool show_help = false;
             Opts opts = new Opts();
             var p = new Mono.Options.OptionSet() {
-                { "p|progress", "prints out little statistics",             v => opts.progress = (v != null) },
-                { "d|depth=",   "max depth to go down",                     v => opts.Depth = Convert.ToInt32(v) },
-                { "j|follow",   "follow junctions",                         v => opts.FollowJunctions = (v != null) },
-                { "t|threads=",  "max enumeration threads parallel",        v => opts.MaxThreads = Convert.ToInt32(v) },
-                { "h|help",     "show this message and exit",               v => show_help = v != null }            };
+                { "p|progress", "prints out little statistics",           v => opts.progress = (v != null)          },
+                { "d|depth=",   "max depth to go down",                   v => opts.Depth = Convert.ToInt32(v)      },
+                { "j|follow",   "follow junctions",                       v => opts.FollowJunctions = (v != null)   },
+                { "t|threads=", "max enumeration threads parallel",       v => opts.MaxThreads = Convert.ToInt32(v) },
+                { "sorta",      "force sorting of entries on side A",     v => opts.forceSortA = (v != null)        },
+                { "sortb",      "force sorting of entries on side B",     v => opts.forceSortB = (v != null)        },
+                { "h|help",     "show this message and exit",             v => show_help       = (v != null)        } };
 
             try
             {
@@ -232,6 +238,16 @@ namespace CmpTrees
                     opts.DirA = dirs[0];
                     opts.DirB = dirs[1];
                 }
+
+                if (opts != null && opts.forceSortA)
+                {
+                    Console.Error.WriteLine("will sort items in dir A");
+                }
+                if (opts != null && opts.forceSortB)
+                {
+                    Console.Error.WriteLine("will sort items in dir B");
+                }
+
             }
             catch (Mono.Options.OptionException oex)
             {

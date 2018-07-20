@@ -28,6 +28,8 @@ namespace CmpTrees
     {
         public int maxDepth = -1;
         public bool followJunctions = false;
+        public bool forceSortA = false;
+        public bool forceSortB = false;
     }
 
     public class CmpDirsParallel
@@ -212,6 +214,8 @@ namespace CmpTrees
             AppendSearchDir(ref DirA, dirToSearchSinceRootDir);
             AppendSearchDir(ref DirB, dirToSearchSinceRootDir);
 
+            //this._opts.
+
             CmpDirs.Run(DirA, DirB,
                 (DIFF_STATE diffstate, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b) =>
                 {
@@ -227,6 +231,8 @@ namespace CmpTrees
                         _diffHandler(diffstate, dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
                     }
                 },
+                this._opts.forceSortA,
+                this._opts.forceSortB,
                 _errorHandler);
 
             DirA.Length = _RootDirA.Length;

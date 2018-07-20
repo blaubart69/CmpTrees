@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
+using System.Linq;
 
 using Spi.Native;
 using Spi.Data;
@@ -11,10 +11,21 @@ namespace CmpTrees
 {
     class CmpDirs
     {
-        public static void Run(StringBuilder dira, StringBuilder dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, ErrorHandler errorHandler)
+        public static void Run(StringBuilder dira, StringBuilder dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, 
+            bool forceSortA, bool forceSortB, ErrorHandler errorHandler)
         {
             IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.Entries_IntPtr(dira, errorHandler);
             IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.Entries_IntPtr(dirb, errorHandler);
+
+            if ( forceSortA )
+            {
+                sortedItemsA = sortedItemsA.OrderBy(keySelector: k => k.cFileName, comparer: StringComparer.OrdinalIgnoreCase);
+            }
+
+            if ( forceSortB )
+            {
+                sortedItemsB = sortedItemsB.OrderBy(keySelector: k => k.cFileName, comparer: StringComparer.OrdinalIgnoreCase);
+            }
 
             Spi.Data.DiffSortedLists.Run<Win32.FIND_DATA>(
                 ListA: sortedItemsA,
