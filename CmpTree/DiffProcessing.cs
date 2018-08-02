@@ -31,11 +31,66 @@ namespace CmpTrees
         /// </summary>
         public void DiffCallback(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b)
         {
-            Win32.FIND_DATA? File_Data_ToUse = null;
-            Win32.FIND_DATA? File_Data_NewDel = null;
-            char? NewOrDel = null;
-            ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse = null;
+            Win32.FIND_DATA? File_Data_ToUse;
+            Win32.FIND_DATA? File_Data_NewDel;
+            ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse;
             TextWriter toWriteTo;
+
+            ProcessDiffState_UpdateCounters(state, ref find_data_a, ref find_data_b, 
+                out toWriteTo, out File_Data_ToUse, out File_Data_NewDel, out DicToUse);
+
+            if (DicToUse != null && File_Data_NewDel.HasValue)
+            {
+                ProcessNewDelDictionary(basedir, ref DicToUse, File_Data_NewDel.Value);
+            }
+
+            string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
+            string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
+            string FullFilename = baseDirToPrint + filenameToPrint;
+
+            if (File_Data_ToUse.HasValue)
+            {
+                var findData = File_Data_ToUse.Value;
+                WriteDiffLineToFile(toWriteTo, findData, FullFilename);
+            }
+            else
+            {
+                toWriteTo.WriteLine($"{FullFilename}");
+            }
+        }
+
+        private static void WriteDiffLineToFile(TextWriter toWriteTo, Win32.FIND_DATA findData, string FullFilename)
+        {
+            toWriteTo.WriteLine(
+                $"{findData.FileSize}"
+                + $"\t{ConvertFiletimeToString(findData.ftCreationTime, FullFilename, "creationTime")}"
+                + $"\t{ConvertFiletimeToString(findData.ftLastWriteTime, FullFilename, "lastWriteTime")}"
+                + $"\t{ConvertFiletimeToString(findData.ftLastAccessTime, FullFilename, "lastAccessTime")}"
+                + $"\t{FullFilename}");
+        }
+
+        private static void ProcessNewDelDictionary(string basedir, ref ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse, Win32.FIND_DATA Find_Data)
+        {
+            DicToUse.AddOrUpdate(
+                key: Find_Data,
+                addValueFactory:    (find_data)               => { return new List<string>() {basedir}; },
+                updateValueFactory: (find_data, listBasedirs) =>
+                {
+                    listBasedirs.Add(basedir);
+                    return listBasedirs;
+                });
+        }
+
+        private void ProcessDiffState_UpdateCounters(DIFF_STATE state, 
+            ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b, 
+            out TextWriter toWriteTo, 
+            out Win32.FIND_DATA? File_Data_ToUse, out Win32.FIND_DATA? File_Data_NewDel, 
+            out ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse)
+        {
+            File_Data_ToUse = null;
+            File_Data_NewDel = null;
+            DicToUse = null;
+
             switch (state)
             {
                 default:
@@ -43,26 +98,28 @@ namespace CmpTrees
                 case DIFF_STATE.NEW:
                     if (Spi.Misc.IsDirectoryFlagSet(find_data_b))
                     {
-                        toWriteTo = _writers.newDirWriter;
                         Interlocked.Increment(ref _stats.DirsNew);
+                        toWriteTo = _writers.newDirWriter;
                     }
                     else
                     {
-                        toWriteTo = _writers.newWriter;
                         Interlocked.Increment(ref _stats.FilesNew);
-                        Interlocked.Add(ref _stats.FilesNewBytes, (long)find_data_b.FileSize);
+                        Interlocked.Add(ref _stats.FilesNewBytes, (long) find_data_b.FileSize);
+                        toWriteTo = _writers.newWriter;
                         File_Data_ToUse = find_data_b;
                         File_Data_NewDel = find_data_b;
-                        NewOrDel = 'N';
                         DicToUse = newFilesDic;
                     }
+
                     break;
+
                 case DIFF_STATE.MODIFY:
                     toWriteTo = _writers.modWriter;
                     Interlocked.Increment(ref _stats.FilesMod);
-                    Interlocked.Add(ref _stats.FilesModBytes, (long)find_data_b.FileSize - (long)find_data_a.FileSize);
+                    Interlocked.Add(ref _stats.FilesModBytes, (long) find_data_b.FileSize - (long) find_data_a.FileSize);
                     File_Data_ToUse = find_data_b;
                     break;
+
                 case DIFF_STATE.DELETE:
                     if (Spi.Misc.IsDirectoryFlagSet(find_data_a))
                     {
@@ -73,54 +130,15 @@ namespace CmpTrees
                     {
                         toWriteTo = _writers.delWriter;
                         Interlocked.Increment(ref _stats.FilesDel);
-                        Interlocked.Add(ref _stats.FilesDelBytes, (long)find_data_a.FileSize);
+                        Interlocked.Add(ref _stats.FilesDelBytes, (long) find_data_a.FileSize);
                         File_Data_ToUse = find_data_a;
                         File_Data_NewDel = find_data_a;
-                        NewOrDel = 'D';
                         DicToUse = delFilesDic;
                     }
                     break;
             }
-
-            if (DicToUse != null && File_Data_NewDel.HasValue)
-            {
-                DicToUse.AddOrUpdate(
-                    key: File_Data_NewDel.Value,
-                    addValueFactory:    (find_data)               =>
-                    {
-#if DEBUG
-                        Console.WriteLine("{0} addValue:\tfile [{1}] basedir [{2}]", NewOrDel, find_data.cFileName, basedir);
-#endif
-                        return new List<string>() { basedir };
-                    },
-                    updateValueFactory: (find_data, listBasedirs) => 
-                    {
-#if DEBUG
-                        Console.WriteLine("{0} updateValue:\tfile [{1}] basedir [{2}]", NewOrDel, find_data.cFileName, basedir);
-#endif
-                        listBasedirs.Add(basedir); return listBasedirs;
-                    });
-            }
-
-            string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
-            string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
-            string FullFilename = baseDirToPrint + filenameToPrint;
-
-            if (File_Data_ToUse.HasValue)
-            {
-                var data = File_Data_ToUse.Value;
-                toWriteTo.WriteLine(
-                      $"{data.FileSize}"
-                    + $"\t{ConvertFiletimeToString(data.ftCreationTime,   FullFilename, "creationTime")}"
-                    + $"\t{ConvertFiletimeToString(data.ftLastWriteTime,  FullFilename, "lastWriteTime")}"
-                    + $"\t{ConvertFiletimeToString(data.ftLastAccessTime, FullFilename, "lastAccessTime")}"
-                    + $"\t{FullFilename}");
-            }
-            else
-            {
-                toWriteTo.WriteLine($"{FullFilename}");
-            }
         }
+
         private static string ConvertFiletimeToString(FILETIME filetime, string FullFilename, string KindOfFiletime)
         {
             string result;
