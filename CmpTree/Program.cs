@@ -1,23 +1,16 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
-using System.Linq;
-
 using Spi;
 using Spi.Native;
-using Spi.Data;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 
 namespace CmpTrees
 {
     public class Stats
     {
-        public long FilesA;
-        public long FilesB;
         public long FilesNew;
         public long FilesNewBytes;
         public long FilesMod;
@@ -155,11 +148,11 @@ namespace CmpTrees
             string privMem      = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
             string threadcount  = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
-            statWriter.Write($"dirs queued/running/done: {queued}/{running}/{cmpsDone}"
-                + $" | new/mod/del: {stats.FilesNew}/{stats.FilesMod}/{stats.FilesDel}"
-                + $" | GC.Total: {Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))}"
-                + $" | PrivateMemory: {privMem}"
-                + $" | Threads: {threadcount}");
+            statWriter.Write($"dirs queued/running/done: {queued:N0}/{running}/{cmpsDone:N0}"
+                 + $" | new/mod/del: {stats.FilesNew:N0}/{stats.FilesMod:N0}/{stats.FilesDel:N0}"
+                 + $" | GC/privMem/threads "
+                     + Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))
+                     + $"/{privMem}/{threadcount}");
         }
         private static void WriteStatistics(TimeSpan ProgramDuration, long comparesDone, Stats stats)
         {
