@@ -120,7 +120,7 @@ namespace Spi
             return IsDirectoryFlagSet(find_data.dwFileAttributes);
         }
         
-        public static void WaitUtilSet(WaitHandle waitHandle, int milliSeconds, Action doEvery)
+        public static void ExecUtilWaitHandleSet(WaitHandle waitHandle, int milliSeconds, Action doEvery)
         {
             while ( !waitHandle.WaitOne(milliSeconds) )
             {

@@ -24,7 +24,7 @@ namespace CmpTrees
     {
         public string DirA;
         public string DirB;
-        public bool progress;
+        //public bool progress;
         public bool FollowJunctions = false;
         public int Depth = -1;
         public int MaxThreads = 32;
@@ -53,11 +53,12 @@ namespace CmpTrees
 
             try
             {
-                ManualResetEvent CtrlCEvent = new ManualResetEvent(false);
+                var CtrlCEvent = new CancellationTokenSource();
                 StartBackgroudQuitPressedThread(CtrlCEvent);
+
                 using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
                 {
-                    RunCompare(opts, CtrlCEvent, errWriter,
+                    RunCompare(opts, CtrlCEvent.Token, errWriter,
                         out SortedList<Win32.FIND_DATA, List<string>> newFiles,
                         out SortedList<Win32.FIND_DATA, List<string>> delFiles);
 
@@ -99,7 +100,7 @@ namespace CmpTrees
             }
         }
 
-        private static void RunCompare(Opts opts, ManualResetEvent CtrlCEvent, ConsoleAndFileWriter errWriter,
+        private static void RunCompare(Opts opts, CancellationToken CtrlCEvent, ConsoleAndFileWriter errWriter,
             out SortedList<Win32.FIND_DATA, List<string>> newFiles,
             out SortedList<Win32.FIND_DATA, List<string>> delFiles)
         {
@@ -116,7 +117,7 @@ namespace CmpTrees
                     forceSortB = opts.forceSortB
                 };
 
-                DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters);
+                DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters, collectNewAndDelFiles: true);
 
                 var paraCmp = new CmpDirsParallel(
                     Spi.Long.GetLongFilenameNotation(opts.DirA),
@@ -124,11 +125,11 @@ namespace CmpTrees
                     enumOpts,
                     diffProcessor.DiffCallback,
                     (int RetCode, string Message) => errWriter.WriteLine($"E: rc={RetCode}\t{Message}"),
-                    CtrlCEvent);
-                paraCmp.Start(opts.MaxThreads);
+                    CtrlCEvent, opts.MaxThreads);
+                paraCmp.Start();
 
                 StatusLineWriter statWriter = new StatusLineWriter();
-                Misc.WaitUtilSet(paraCmp.IsFinished, 2000, () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
+                Misc.ExecUtilWaitHandleSet(paraCmp.Finished, 2000, () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
 
                 IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataComparer_Name_Size_Modified();
@@ -172,28 +173,30 @@ namespace CmpTrees
               + $"\nnew dirs \t{stats.DirsNew,12:N0}"
               + $"\ndel dirs \t{stats.DirsDel,12:N0}");
         }
-        static void StartBackgroudQuitPressedThread(ManualResetEvent CtrlCPressed)
+        static void StartBackgroudQuitPressedThread(CancellationTokenSource CtrlC)
         {
-            new Thread(new ThreadStart(() =>
-            {
-                try
-                {
-                    while (true)
+            ThreadPool.QueueUserWorkItem(
+                new WaitCallback(
+                    (object state) =>
                     {
-                        if (Console.ReadKey().KeyChar == 'q')
+                        try
                         {
-                            Console.Error.WriteLine("\ngoing down...\n");
-                            CtrlCPressed.Set();
-                            break;
+                            while (true)
+                            {
+                                if (Console.ReadKey().KeyChar == 'q')
+                                {
+                                    Console.Error.WriteLine("\ngoing down...\n");
+                                    CtrlC.Cancel();
+                                    break;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.Error.WriteLine($"something is wrong in the thread waiting for 'q' to be pressed.\n[{ex.Message}]");
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine($"something is wrong in the thread waiting for 'q' to be pressed.\n[{ex.Message}]");
-                }
-            }))
-            { IsBackground = true }.Start();
+                    ));
 
         }
         static void ShowHelp(Mono.Options.OptionSet p)
@@ -209,7 +212,7 @@ namespace CmpTrees
             bool show_help = false;
             Opts opts = new Opts();
             var p = new Mono.Options.OptionSet() {
-                { "p|progress", "prints out little statistics",           v => opts.progress = (v != null)          },
+                //{ "p|progress", "prints out little statistics",           v => opts.progress = (v != null)          },
                 { "d|depth=",   "max depth to go down",                   v => opts.Depth = Convert.ToInt32(v)      },
                 { "j|follow",   "follow junctions",                       v => opts.FollowJunctions = (v != null)   },
                 { "t|threads=", "max enumeration threads parallel",       v => opts.MaxThreads = Convert.ToInt32(v) },

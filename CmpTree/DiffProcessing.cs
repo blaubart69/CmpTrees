@@ -17,14 +17,18 @@ namespace CmpTrees
         public readonly ConcurrentDictionary<Win32.FIND_DATA, List<string>> newFilesDic;
         public readonly ConcurrentDictionary<Win32.FIND_DATA, List<string>> delFilesDic;
 
-        public DiffProcessing(Stats stats, DiffWriter writers)
+        public DiffProcessing(Stats stats, DiffWriter writers, bool collectNewAndDelFiles)
         {
             _stats = stats;
             _writers = writers;
 
             var find_data_Comparer = new FindDataComparer_Name_Size_Modified();
-            newFilesDic = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>(find_data_Comparer);
-            delFilesDic = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>(find_data_Comparer);
+
+            if (collectNewAndDelFiles)
+            {
+                newFilesDic = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>(find_data_Comparer);
+                delFilesDic = new ConcurrentDictionary<Win32.FIND_DATA, List<string>>(find_data_Comparer);
+            }
         }
         /// <summary>
         /// ATTENZIONE!!!! MULTI-THREADING AHEAD!!!
@@ -39,9 +43,12 @@ namespace CmpTrees
             ProcessDiffState_UpdateCounters(state, ref find_data_a, ref find_data_b, 
                 out toWriteTo, out File_Data_ToUse, out File_Data_NewDel, out DicToUse);
 
-            if (DicToUse != null && File_Data_NewDel.HasValue)
+            if (newFilesDic != null && delFilesDic != null)
             {
-                ProcessNewDelDictionary(basedir, ref DicToUse, File_Data_NewDel.Value);
+                if (DicToUse != null && File_Data_NewDel.HasValue)
+                {
+                    ProcessNewDelDictionary(basedir, ref DicToUse, File_Data_NewDel.Value);
+                }
             }
 
             string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
