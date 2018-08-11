@@ -40,10 +40,9 @@ namespace TestnCmpTree
             var c = new CmpTrees.CmpDirsParallel(dira, dirb, new CmpTrees.EnumOptions(),
                 (DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b) => { diff = true; },
                 (rc, msg) => { error = true; },
-                new ManualResetEvent(false));
+                new CancellationTokenSource().Token, 3);
             c.Start();
-            while ( ! c.IsFinished.WaitOne(1000) )
-            { }
+            c.Finished.WaitOne();
             Assert.IsFalse(error);
             Assert.IsFalse(diff);
         }
@@ -72,8 +71,9 @@ namespace TestnCmpTree
             File.Copy(srcFilename, trgFilename);
 
             var result = RunCmp(dira, dirb);
-            Assert.AreEqual(1, result.Count);
-            Assert.IsTrue(result.All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("x") && !Misc.IsDirectoryFlagSet(r.a.dwFileAttributes)));
+            
+            Assert.AreEqual(0, result.Count); // should be 0 as we reporting no SAMESAME files
+            //Assert.IsTrue(result.All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("x") && !Misc.IsDirectoryFlagSet(r.a.dwFileAttributes)));
         }
         [TestMethod]
         public void TwoSameSameFilesInSubDir()
@@ -88,9 +88,9 @@ namespace TestnCmpTree
             File.Copy(srcFilename, trgFilename);
 
             var result = RunCmp(dira, dirb);
-            Assert.AreEqual(2, result.Count);
-            Assert.IsTrue(result.Where(i => !Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("x")));
-            Assert.IsTrue(result.Where(i =>  Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("subdir")));
+            Assert.AreEqual(0, result.Count);   // should be 0 as we reporting no SAMESAME files
+            //Assert.IsTrue(result.Where(i => !Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("x")));
+            //Assert.IsTrue(result.Where(i =>  Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("subdir")));
         }
         // --------------------------------------------------------------------
         IList<DiffData> RunCmp(string dira, string dirb)
@@ -104,10 +104,9 @@ namespace TestnCmpTree
                     result.Add(new DiffData(state, basedir, find_data_a, find_data_b));
                 },
                 (rc, msg) => { error = true; },
-                new ManualResetEvent(false));
+                new CancellationTokenSource().Token, 4);
             c.Start();
-            while (!c.IsFinished.WaitOne(1000))
-            { }
+            c.Finished.WaitOne();
             Assert.IsFalse(error);
 
             return result;

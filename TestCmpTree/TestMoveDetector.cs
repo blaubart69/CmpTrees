@@ -54,11 +54,11 @@ namespace TestnCmpTree
         private static List<MoveEntry> CalcMoves(string baseDir, string dira, string dirb)
         {
             bool err = false;
-            DiffProcessing diffProc = new DiffProcessing(new Stats(), new DiffWriter(baseDir));
+            DiffProcessing diffProc = new DiffProcessing(new Stats(), new DiffWriter(baseDir), true);
             var paraCmp = new CmpDirsParallel(dira, dirb, new EnumOptions(), diffProc.DiffCallback,
-                (rc, msg) => { err = true; }, new System.Threading.ManualResetEvent(false));
+                (rc, msg) => { err = true; }, new System.Threading.CancellationTokenSource().Token, 2);
             paraCmp.Start();
-            Misc.WaitUtilSet(paraCmp.IsFinished, 2000, doEvery: null );
+            Misc.ExecUtilWaitHandleSet(paraCmp.Finished, 2000, doEvery: null );
 
             IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataComparer_Name_Size_Modified();
             var newFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProc.newFilesDic, find_data_Comparer);
