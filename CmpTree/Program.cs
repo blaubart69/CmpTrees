@@ -53,11 +53,11 @@ namespace CmpTrees
 
             try
             {
-                var CtrlCEvent = new CancellationTokenSource();
-                StartBackgroudQuitPressedThread(CtrlCEvent);
 
+                using (var CtrlCEvent = new CancellationTokenSource())
                 using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
                 {
+                    StartBackgroudQuitPressedThread(CtrlCEvent);
                     RunCompare(opts, CtrlCEvent.Token, errWriter,
                         out SortedList<Win32.FIND_DATA, List<string>> newFiles,
                         out SortedList<Win32.FIND_DATA, List<string>> delFiles);
@@ -78,7 +78,6 @@ namespace CmpTrees
                 return 12;
             }
             return 0;
-
         }
 
         private static void RunMoveDetector(SortedList<Win32.FIND_DATA, List<string>> newFiles, SortedList<Win32.FIND_DATA, List<string>> delFiles, ConsoleAndFileWriter errWriter)
