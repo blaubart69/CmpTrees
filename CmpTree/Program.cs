@@ -53,7 +53,6 @@ namespace CmpTrees
 
             try
             {
-
                 using (var CtrlCEvent = new CancellationTokenSource())
                 using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
                 {

@@ -52,13 +52,12 @@ namespace CmpTrees
             }
 
             string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
-            string baseDirToPrint = basedir == null ? String.Empty : basedir + "\\";
-            string FullFilename = baseDirToPrint + filenameToPrint;
+            string FullFilename = Path.Combine(basedir, filenameToPrint);
 
             if (File_Data_ToUse.HasValue)
             {
                 var findData = File_Data_ToUse.Value;
-                WriteDiffLineToFile(toWriteTo, findData, FullFilename);
+                WriteFindDataLine(toWriteTo, ref findData, FullFilename);
             }
             else
             {
@@ -66,15 +65,6 @@ namespace CmpTrees
             }
         }
 
-        private static void WriteDiffLineToFile(TextWriter toWriteTo, Win32.FIND_DATA findData, string FullFilename)
-        {
-            toWriteTo.WriteLine(
-                $"{findData.FileSize}"
-                + $"\t{ConvertFiletimeToString(findData.ftCreationTime, FullFilename, "creationTime")}"
-                + $"\t{ConvertFiletimeToString(findData.ftLastWriteTime, FullFilename, "lastWriteTime")}"
-                + $"\t{ConvertFiletimeToString(findData.ftLastAccessTime, FullFilename, "lastAccessTime")}"
-                + $"\t{FullFilename}");
-        }
 
         private static void ProcessNewDelDictionary(string basedir, ref ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse, Win32.FIND_DATA Find_Data)
         {
@@ -145,7 +135,37 @@ namespace CmpTrees
                     break;
             }
         }
+        private static void WriteFindDataLine(TextWriter writer, ref Win32.FIND_DATA findData, string FullFilename)
+        {
+            /*
+            writer.WriteLine(
+                $"{findData.FileSize}"
+                + $"\t{ConvertFiletimeToString(findData.ftCreationTime, FullFilename, "creationTime")}"
+                + $"\t{ConvertFiletimeToString(findData.ftLastWriteTime, FullFilename, "lastWriteTime")}"
+                + $"\t{ConvertFiletimeToString(findData.ftLastAccessTime, FullFilename, "lastAccessTime")}"
+                + $"\t{FullFilename}");
+                */
 
+            uint attr = findData.dwFileAttributes;
+
+            writer.WriteLine(
+                "{0}{1}{2}{3}{4}\t{5:X}"   // attributes             (human \t machine)
+            + "\t{6}\t{7}\t{8}"            // create, access, modify (human)
+            + "\t{9:9}\t{10}"              // filesize, filename    
+            , (((attr & (uint)System.IO.FileAttributes.Archive)   != 0) ? 'A' : '-')
+            , (((attr & (uint)System.IO.FileAttributes.System)    != 0) ? 'S' : '-')
+            , (((attr & (uint)System.IO.FileAttributes.Hidden)    != 0) ? 'H' : '-')
+            , (((attr & (uint)System.IO.FileAttributes.ReadOnly)  != 0) ? 'R' : '-')
+            , (((attr & (uint)System.IO.FileAttributes.Directory) != 0) ? 'D' : '-')
+            , attr
+            , ConvertFiletimeToString(findData.ftCreationTime,   FullFilename, "creationTime")
+            , ConvertFiletimeToString(findData.ftLastAccessTime, FullFilename, "lastAccessTime")
+            , ConvertFiletimeToString(findData.ftLastWriteTime,  FullFilename, "lastWriteTime")
+            , findData.FileSize
+            , FullFilename
+            );
+
+        }
         private static string ConvertFiletimeToString(FILETIME filetime, string FullFilename, string KindOfFiletime)
         {
             string result;
