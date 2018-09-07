@@ -33,14 +33,14 @@ namespace CmpTrees
         /// <summary>
         /// ATTENZIONE!!!! MULTI-THREADING AHEAD!!!
         /// </summary>
-        public void DiffCallback(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b)
+        public void DiffCallback(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_src, ref Win32.FIND_DATA find_data_trg)
         {
             Win32.FIND_DATA? File_Data_ToUse;
             Win32.FIND_DATA? File_Data_NewDel;
             ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse;
             TextWriter toWriteTo;
 
-            ProcessDiffState_UpdateCounters(state, ref find_data_a, ref find_data_b, 
+            ProcessDiffState_UpdateCounters(state, ref find_data_src, ref find_data_trg, 
                 out toWriteTo, out File_Data_ToUse, out File_Data_NewDel, out DicToUse);
 
             if (newFilesDic != null && delFilesDic != null)
@@ -51,7 +51,7 @@ namespace CmpTrees
                 }
             }
 
-            string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_b.cFileName : find_data_a.cFileName;
+            string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_src.cFileName : find_data_trg.cFileName;
             string FullFilename = Path.Combine(basedir, filenameToPrint);
 
             if (File_Data_ToUse.HasValue)
@@ -79,7 +79,7 @@ namespace CmpTrees
         }
 
         private void ProcessDiffState_UpdateCounters(DIFF_STATE state, 
-            ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b, 
+            ref Win32.FIND_DATA find_data_src, ref Win32.FIND_DATA find_data_trg, 
             out TextWriter toWriteTo, 
             out Win32.FIND_DATA? File_Data_ToUse, out Win32.FIND_DATA? File_Data_NewDel, 
             out ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse)
@@ -93,7 +93,7 @@ namespace CmpTrees
                 default:
                     throw new Exception($"internal error. no such writer for this kind of state. [{state.ToString()}]");
                 case DIFF_STATE.NEW:
-                    if (Spi.Misc.IsDirectoryFlagSet(find_data_b))
+                    if (Spi.Misc.IsDirectory(find_data_src))
                     {
                         Interlocked.Increment(ref _stats.DirsNew);
                         toWriteTo = _writers.newDirWriter;
@@ -101,10 +101,10 @@ namespace CmpTrees
                     else
                     {
                         Interlocked.Increment(ref _stats.FilesNew);
-                        Interlocked.Add(ref _stats.FilesNewBytes, (long) find_data_b.FileSize);
+                        Interlocked.Add(ref _stats.FilesNewBytes, (long)find_data_src.FileSize);
                         toWriteTo = _writers.newWriter;
-                        File_Data_ToUse = find_data_b;
-                        File_Data_NewDel = find_data_b;
+                        File_Data_ToUse  = find_data_src;
+                        File_Data_NewDel = find_data_src;
                         DicToUse = newFilesDic;
                     }
 
@@ -113,12 +113,12 @@ namespace CmpTrees
                 case DIFF_STATE.MODIFY:
                     toWriteTo = _writers.modWriter;
                     Interlocked.Increment(ref _stats.FilesMod);
-                    Interlocked.Add(ref _stats.FilesModBytes, (long) find_data_b.FileSize - (long) find_data_a.FileSize);
-                    File_Data_ToUse = find_data_b;
+                    Interlocked.Add(ref _stats.FilesModBytes, (long) find_data_trg.FileSize - (long) find_data_src.FileSize);
+                    File_Data_ToUse = find_data_trg;
                     break;
 
                 case DIFF_STATE.DELETE:
-                    if (Spi.Misc.IsDirectoryFlagSet(find_data_a))
+                    if (Spi.Misc.IsDirectory(find_data_trg))
                     {
                         toWriteTo = _writers.delDirWriter;
                         Interlocked.Increment(ref _stats.DirsDel);
@@ -127,9 +127,9 @@ namespace CmpTrees
                     {
                         toWriteTo = _writers.delWriter;
                         Interlocked.Increment(ref _stats.FilesDel);
-                        Interlocked.Add(ref _stats.FilesDelBytes, (long) find_data_a.FileSize);
-                        File_Data_ToUse = find_data_a;
-                        File_Data_NewDel = find_data_a;
+                        Interlocked.Add(ref _stats.FilesDelBytes, (long)find_data_trg.FileSize);
+                        File_Data_ToUse  = find_data_trg;
+                        File_Data_NewDel = find_data_trg;
                         DicToUse = delFilesDic;
                     }
                     break;

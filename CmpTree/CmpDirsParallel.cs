@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using System.Collections.Generic;
 
 using Spi.Native;
 using Spi.Data;
@@ -10,7 +9,7 @@ using System.Text;
 namespace CmpTrees
 {
     public delegate void ErrorHandler(int RetCode, string Message);
-    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b);
+    public delegate void DiffHandler(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_src, ref Win32.FIND_DATA find_data_trg);
     
     class ParallelCtx
     {
@@ -26,30 +25,30 @@ namespace CmpTrees
     
     public class EnumOptions
     {
-        public int maxDepth = -1;
+        public int  maxDepth = -1;
         public bool followJunctions = false;
-        public bool forceSortA = false;
-        public bool forceSortB = false;
+        public bool forceSortSource = false;
+        public bool forceSortTarget = false;
     }
 
     public class RootDirs
     {
-        public StringBuilder A;
-        public StringBuilder B;
-        public readonly int initialLenA;
-        public readonly int initialLenB;
+        public StringBuilder source;
+        public StringBuilder target;
+        public readonly int initialLenSource;
+        public readonly int initialLenTarget;
 
-        public RootDirs(string a, string b)
+        public RootDirs(string source, string target)
         {
-            A = new StringBuilder(a);
-            B = new StringBuilder(b);
+            this.source = new StringBuilder(source);
+            this.target = new StringBuilder(target);
 
-            initialLenA = A.Length;
-            initialLenB = B.Length;
+            initialLenSource = this.source.Length;
+            initialLenTarget = this.target.Length;
         }
     }
 
-    public class CmpDirsParallel
+        public class CmpDirsParallel
     {
         readonly EnumOptions _opts;
 
@@ -75,7 +74,7 @@ namespace CmpTrees
         public WaitHandle Finished { get { return _executor.Finished; } }
         #endregion
 
-        public CmpDirsParallel(string dira, string dirb, EnumOptions opts, DiffHandler diffHandler, ErrorHandler errorHandler, CancellationToken CtrlCEvent, int maxThreadsToRun)
+        public CmpDirsParallel(string sourceDir, string targetDir, EnumOptions opts, DiffHandler diffHandler, ErrorHandler errorHandler, CancellationToken CtrlCEvent, int maxThreadsToRun)
         {
             _opts = opts;
             _diffHandler = diffHandler;
@@ -83,7 +82,7 @@ namespace CmpTrees
             _CtrlCEvent = CtrlCEvent;
 
             _executor = new Spi.ParallelExecutor<ParallelCtx, object, RootDirs>(
-                initTL: () => new RootDirs(dira, dirb)
+                initTL: () => new RootDirs(sourceDir, targetDir)
                 , func: CompareTwoDirectories
                 , freeTL: null
                 , context: null
@@ -96,17 +95,15 @@ namespace CmpTrees
         {
             _executor.Enqueue(new ParallelCtx(String.Empty, 0));
         }
-        //public delegate void WorkFunc(T item, ParallelExecutor<T, C, TL> executor, C context, ref TL threadLocalObject);
-
         private void CompareTwoDirectories(ParallelCtx relativeDir, Spi.ParallelExecutor<ParallelCtx, object, RootDirs> executor, object ctx, ref RootDirs rootDir)
         {
-            AppendDir(ref rootDir.A, relativeDir.dirToSearchSinceRootDir);
-            AppendDir(ref rootDir.B, relativeDir.dirToSearchSinceRootDir);
+            AppendDir(ref rootDir.source, relativeDir.dirToSearchSinceRootDir);
+            AppendDir(ref rootDir.target, relativeDir.dirToSearchSinceRootDir);
 
-            CmpDirs.Run(rootDir.A, rootDir.B,
-                (DIFF_STATE diffstate, Win32.FIND_DATA find_data_a, Win32.FIND_DATA find_data_b) =>
+            CmpDirs.Run(rootDir.source, rootDir.target,
+                (DIFF_STATE diffstate, Win32.FIND_DATA find_data_src, Win32.FIND_DATA find_data_trg) =>
                 {
-                    GetDirToEnum(diffstate, ref find_data_a, ref find_data_b, out string newDirToEnum, out uint attrs);
+                    GetDirToEnum(diffstate, ref find_data_src, ref find_data_trg, out string newDirToEnum, out uint attrs);
 
                     if (newDirToEnum != null && WalkIntoDir(attrs, _opts.followJunctions, relativeDir.depth, _opts.maxDepth))
                     {
@@ -115,35 +112,35 @@ namespace CmpTrees
 
                     if (diffstate != DIFF_STATE.SAMESAME)
                     {
-                        _diffHandler(diffstate, relativeDir.dirToSearchSinceRootDir, ref find_data_a, ref find_data_b);
+                        _diffHandler(diffstate, relativeDir.dirToSearchSinceRootDir, ref find_data_src, ref find_data_trg);
                     }
                 },
-                this._opts.forceSortA,
-                this._opts.forceSortB,
+                this._opts.forceSortSource,
+                this._opts.forceSortTarget,
                 _errorHandler);
 
-            rootDir.A.Length = rootDir.initialLenA;
-            rootDir.B.Length = rootDir.initialLenB;
+            rootDir.source.Length = rootDir.initialLenSource;
+            rootDir.target.Length = rootDir.initialLenTarget;
         }
 
-        private static void GetDirToEnum(DIFF_STATE state, ref Win32.FIND_DATA find_data_a, ref Win32.FIND_DATA find_data_b, out string newDirToEnum, out uint attrs)
+        private static void GetDirToEnum(DIFF_STATE state, ref Win32.FIND_DATA find_data_src, ref Win32.FIND_DATA find_data_trg, out string newDirToEnum, out uint attrs)
         {
             newDirToEnum = null;
             attrs = 0;
-            if (state == DIFF_STATE.NEW && Spi.Misc.IsDirectoryFlagSet(find_data_b))
+            if (state == DIFF_STATE.NEW && Spi.Misc.IsDirectory(find_data_src))
             {
-                newDirToEnum    = find_data_b.cFileName;
-                attrs           = find_data_b.dwFileAttributes;
+                newDirToEnum    = find_data_src.cFileName;
+                attrs           = find_data_src.dwFileAttributes;
             }
-            else if (state == DIFF_STATE.DELETE && Spi.Misc.IsDirectoryFlagSet(find_data_a))
+            else if (state == DIFF_STATE.DELETE && Spi.Misc.IsDirectory(find_data_trg))
             {
-                newDirToEnum = find_data_a.cFileName;
-                attrs        = find_data_a.dwFileAttributes;
+                newDirToEnum = find_data_trg.cFileName;
+                attrs        = find_data_trg.dwFileAttributes;
             }
-            else if (state == DIFF_STATE.SAMESAME && Spi.Misc.IsDirectoryFlagSet(find_data_a) && Spi.Misc.IsDirectoryFlagSet(find_data_b))
+            else if (state == DIFF_STATE.SAMESAME && Spi.Misc.IsDirectory(find_data_src) && Spi.Misc.IsDirectory(find_data_trg))
             {
-                newDirToEnum = find_data_a.cFileName;
-                attrs = find_data_a.dwFileAttributes;
+                newDirToEnum = find_data_src.cFileName;
+                attrs        = find_data_src.dwFileAttributes;
             }
         }
         private static void AppendDir(ref StringBuilder dir, string dirToAppend)

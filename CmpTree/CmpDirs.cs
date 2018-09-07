@@ -11,28 +11,35 @@ namespace CmpTrees
 {
     class CmpDirs
     {
-        public static void Run(StringBuilder dira, StringBuilder dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, 
-            bool forceSortA, bool forceSortB, ErrorHandler errorHandler)
+        /// <summary>
+        /// A ... target directory
+        /// B ... source directory
+        /// </summary>
+        public static void Run(StringBuilder sourceDir, StringBuilder targetDir, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, 
+            bool forceSortSource, bool forceSortTarget, ErrorHandler errorHandler)
         {
-            IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.EntriesEx(dira, errorHandler);
-            IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.EntriesEx(dirb, errorHandler);
+            IEnumerable<Win32.FIND_DATA> sortedItemsTrg = EnumDir.Entries_IntPtr(targetDir, errorHandler);
+            IEnumerable<Win32.FIND_DATA> sortedItemsSrc = EnumDir.Entries_IntPtr(sourceDir, errorHandler);
 
-            if ( forceSortA )
+            if ( forceSortTarget)
             {
-                sortedItemsA = sortedItemsA.OrderBy(keySelector: k => k.cFileName, comparer: StringComparer.OrdinalIgnoreCase);
+                sortedItemsTrg = sortedItemsTrg.OrderBy(keySelector: k => k.cFileName, comparer: StringComparer.OrdinalIgnoreCase);
             }
 
-            if ( forceSortB )
+            if (forceSortSource)
             {
-                sortedItemsB = sortedItemsB.OrderBy(keySelector: k => k.cFileName, comparer: StringComparer.OrdinalIgnoreCase);
+                sortedItemsSrc = sortedItemsSrc.OrderBy(keySelector: k => k.cFileName, comparer: StringComparer.OrdinalIgnoreCase);
             }
 
             Spi.Data.DiffSortedLists.Run<Win32.FIND_DATA>(
-                ListA: sortedItemsA,
-                ListB: sortedItemsB,
+                ListA: sortedItemsTrg,
+                ListB: sortedItemsSrc,
                 checkSortOrder: true,
                 ReportSameSame: true,
-                OnCompared: DiffCallback,
+                OnCompared: (state,a,b) =>
+                {
+                    DiffCallback(state, b, a);
+                },
                 KeyComparer: (a,b) =>
                 {
                     int cmp = String.Compare(a.cFileName, b.cFileName, StringComparison.OrdinalIgnoreCase);
@@ -40,8 +47,8 @@ namespace CmpTrees
                     {
                         return cmp;
                     }
-                    bool aIsDir = Spi.Misc.IsDirectoryFlagSet(a.dwFileAttributes);
-                    bool bIsDir = Spi.Misc.IsDirectoryFlagSet(b.dwFileAttributes);
+                    bool aIsDir = Spi.Misc.IsDirectory(a.dwFileAttributes);
+                    bool bIsDir = Spi.Misc.IsDirectory(b.dwFileAttributes);
 
                     return aIsDir == bIsDir 
                                 ?  0    // two directories OR two files --> same name --> return 0 
@@ -49,7 +56,7 @@ namespace CmpTrees
                 },
                 AttributeComparer: (a,b) =>
                 {
-                    if ( Misc.IsDirectoryFlagSet(a) && Misc.IsDirectoryFlagSet(b) )
+                    if ( Misc.IsDirectory(a) && Misc.IsDirectory(b) )
                     {
                         return 0;
                     }

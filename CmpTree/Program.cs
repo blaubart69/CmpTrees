@@ -22,14 +22,13 @@ namespace CmpTrees
     }
     class Opts
     {
-        public string DirA;
-        public string DirB;
-        //public bool progress;
+        public string sourceDir;
+        public string targetDir;
         public bool FollowJunctions = false;
         public int Depth = -1;
         public int MaxThreads = 32;
-        public bool forceSortA = false;
-        public bool forceSortB = false;
+        public bool forceSortSource = false;
+        public bool forceSortTarget = false;
     }
     class Program
     {
@@ -111,19 +110,25 @@ namespace CmpTrees
                 {
                     followJunctions = opts.FollowJunctions,
                     maxDepth = opts.Depth,
-                    forceSortA = opts.forceSortA,
-                    forceSortB = opts.forceSortB
+                    forceSortSource = opts.forceSortSource,
+                    forceSortTarget = opts.forceSortTarget
                 };
 
                 DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters, collectNewAndDelFiles: true);
 
+                string src = Spi.Long.GetLongFilenameNotation(opts.sourceDir);
+                string trg = Spi.Long.GetLongFilenameNotation(opts.targetDir);
+
+                Console.Error.WriteLine($"source: {src}\ntarget: {trg}");
+
                 var paraCmp = new CmpDirsParallel(
-                    Spi.Long.GetLongFilenameNotation(opts.DirA),
-                    Spi.Long.GetLongFilenameNotation(opts.DirB),
-                    enumOpts,
-                    diffProcessor.DiffCallback,
-                    (int RetCode, string Message) => errWriter.WriteLine($"E: rc={RetCode}\t{Message}"),
-                    CtrlCEvent, opts.MaxThreads);
+                    sourceDir:       src,
+                    targetDir:       trg,
+                    opts:            enumOpts,
+                    diffHandler:     diffProcessor.DiffCallback,
+                    errorHandler:    (int RetCode, string Message) => errWriter.WriteLine($"E: rc={RetCode}\t{Message}"),
+                    CtrlCEvent:      CtrlCEvent, 
+                    maxThreadsToRun: opts.MaxThreads);
                 paraCmp.Start();
 
                 StatusLineWriter statWriter = new StatusLineWriter();
@@ -199,8 +204,8 @@ namespace CmpTrees
         }
         static void ShowHelp(Mono.Options.OptionSet p)
         {
-            Console.WriteLine("Usage: CmpTrees [OPTIONS] {DirectoryA} {DirectoryB}");
-            Console.WriteLine("compare dirA with dirB and writes out the differences");
+            Console.WriteLine("Usage: CmpTrees [OPTIONS] {source dir} {target dir}");
+            Console.WriteLine("compare source with target and writes out the differences");
             Console.WriteLine();
             Console.WriteLine("Options:");
             p.WriteOptionDescriptions(Console.Out);
@@ -210,13 +215,12 @@ namespace CmpTrees
             bool show_help = false;
             Opts opts = new Opts();
             var p = new Mono.Options.OptionSet() {
-                //{ "p|progress", "prints out little statistics",           v => opts.progress = (v != null)          },
-                { "d|depth=",   "max depth to go down",                   v => opts.Depth = Convert.ToInt32(v)      },
-                { "j|follow",   "follow junctions",                       v => opts.FollowJunctions = (v != null)   },
-                { "t|threads=", "max enumeration threads parallel",       v => opts.MaxThreads = Convert.ToInt32(v) },
-                { "sorta",      "force sorting of entries on side A",     v => opts.forceSortA = (v != null)        },
-                { "sortb",      "force sorting of entries on side B",     v => opts.forceSortB = (v != null)        },
-                { "h|help",     "show this message and exit",             v => show_help       = (v != null)        } };
+                { "d|depth=",   "max depth to go down",                     v => opts.Depth = Convert.ToInt32(v)      },
+                { "j|follow",   "follow junctions",                         v => opts.FollowJunctions = (v != null)   },
+                { "t|threads=", "max enumeration threads parallel",         v => opts.MaxThreads = Convert.ToInt32(v) },
+                { "sorts",      "force sorting of entries on source side",  v => opts.forceSortSource = (v != null)        },
+                { "sortt",      "force sorting of entries on target side",  v => opts.forceSortTarget = (v != null)        },
+                { "h|help",     "show this message and exit",               v => show_help       = (v != null)        } };
 
             try
             {
@@ -229,17 +233,17 @@ namespace CmpTrees
                 }
                 else
                 {
-                    opts.DirA = dirs[0];
-                    opts.DirB = dirs[1];
+                    opts.sourceDir = dirs[0];
+                    opts.targetDir = dirs[1];
                 }
 
-                if (opts != null && opts.forceSortA)
+                if (opts != null && opts.forceSortSource)
                 {
-                    Console.Error.WriteLine("will sort items in dir A");
+                    Console.Error.WriteLine("will sort items in source dir");
                 }
-                if (opts != null && opts.forceSortB)
+                if (opts != null && opts.forceSortTarget)
                 {
-                    Console.Error.WriteLine("will sort items in dir B");
+                    Console.Error.WriteLine("will sort items in target dir");
                 }
 
             }

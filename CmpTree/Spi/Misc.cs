@@ -111,13 +111,13 @@ namespace Spi
             }
             return false;
         }
-        public static bool IsDirectoryFlagSet(uint dwFileAttributes)
+        public static bool IsDirectory(uint dwFileAttributes)
         {
             return (dwFileAttributes & 0x10) != 0;
         }
-        public static bool IsDirectoryFlagSet(Spi.Native.Win32.FIND_DATA find_data)
+        public static bool IsDirectory(Spi.Native.Win32.FIND_DATA find_data)
         {
-            return IsDirectoryFlagSet(find_data.dwFileAttributes);
+            return IsDirectory(find_data.dwFileAttributes);
         }
         
         public static void ExecUtilWaitHandleSet(WaitHandle waitHandle, int milliSeconds, Action doEvery)
