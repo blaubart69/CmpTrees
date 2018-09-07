@@ -127,17 +127,41 @@ namespace Spi.Native
             #endregion
         }
 
-        /*
-        [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern SafeFileHandle FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
-        */
-
         public static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         [System.Security.SuppressUnmanagedCodeSecurity]
         public static extern SafeFindHandle FindFirstFile(string lpFileName, out FIND_DATA lpFindFileData);
-        //public static extern string FindFirstFile(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
+
+        public enum FINDEX_INFO_LEVELS
+        {
+            FindExInfoStandard = 0,
+            FindExInfoBasic = 1
+        }
+        public enum FINDEX_SEARCH_OPS
+        {
+            FindExSearchNameMatch = 0,
+            FindExSearchLimitToDirectories = 1,
+            FindExSearchLimitToDevices = 2
+        }
+        [Flags]
+        public enum FINDEX_ADDITIONAL_FLAGS : int
+        {
+            FIND_FIRST_EX_CASE_SENSITIVE = 1,
+            FIND_FIRST_EX_LARGE_FETCH = 2,
+            FIND_FIRST_EX_ON_DISK_ENTRIES_ONLY = 4
+        }
+
+        [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        public static extern IntPtr FindFirstFileEx(
+        string lpFileName,
+        FINDEX_INFO_LEVELS fInfoLevelId,
+        ref FIND_DATA lpFindFileData,
+        FINDEX_SEARCH_OPS fSearchOp,
+        IntPtr lpSearchFilter,
+        FINDEX_ADDITIONAL_FLAGS dwAdditionalFlags);
+
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "FindFirstFileW")]
         [System.Security.SuppressUnmanagedCodeSecurity]
@@ -179,7 +203,7 @@ namespace Spi.Native
                                                 IntPtr          securityAttributes,
              [MarshalAs(UnmanagedType.U4)]      FileMode        creationDisposition,
              [MarshalAs(UnmanagedType.U4)]      FileAttributes  flagsAndAttributes,
-             IntPtr templateFile);
+                                                IntPtr          templateFile);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]

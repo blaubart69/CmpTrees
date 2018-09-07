@@ -14,8 +14,8 @@ namespace CmpTrees
         public static void Run(StringBuilder dira, StringBuilder dirb, Action<DIFF_STATE, Win32.FIND_DATA, Win32.FIND_DATA> DiffCallback, 
             bool forceSortA, bool forceSortB, ErrorHandler errorHandler)
         {
-            IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.Entries_IntPtr(dira, errorHandler);
-            IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.Entries_IntPtr(dirb, errorHandler);
+            IEnumerable<Win32.FIND_DATA> sortedItemsA = EnumDir.EntriesEx(dira, errorHandler);
+            IEnumerable<Win32.FIND_DATA> sortedItemsB = EnumDir.EntriesEx(dirb, errorHandler);
 
             if ( forceSortA )
             {
