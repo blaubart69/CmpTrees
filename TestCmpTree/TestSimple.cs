@@ -96,6 +96,51 @@ namespace TestnCmpTree
             //Assert.IsTrue(result.Where(i => !Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("x")));
             //Assert.IsTrue(result.Where(i =>  Misc.IsDirectoryFlagSet(i.a.dwFileAttributes)).All(r => r.state == DIFF_STATE.SAMESAME && r.a.cFileName.Equals("subdir")));
         }
+        [TestMethod]
+        public void OneNewFile()
+        {
+            (string src, string trg) = Util.CreateTwoDirs();
+
+            string srcFilename = Path.Combine(src, "neu.txt");
+            File.WriteAllText(srcFilename, "content");
+
+            IList<DiffData> r = RunCmp(src, trg);
+            Assert.AreEqual(1, r.Count);
+            Assert.IsTrue(r.All(i => i.state == DIFF_STATE.NEW));
+            Assert.AreEqual("neu.txt", r.First().src.cFileName);
+
+        }
+        [TestMethod]
+        public void OneFileDeleted()
+        {
+            (string src, string trg) = Util.CreateTwoDirs();
+
+            string trgFilename = Path.Combine(trg, "toomuch.txt");
+            File.WriteAllText(trgFilename, ".");
+
+            IList<DiffData> r = RunCmp(src, trg);
+            Assert.AreEqual(1, r.Count);
+            Assert.IsTrue(r.All(i => i.state == DIFF_STATE.DELETE));
+            Assert.AreEqual("toomuch.txt", r.First().trg.cFileName);
+
+        }
+        [TestMethod]
+        public void OneFileNewOneFileDel()
+        {
+            (string src, string trg) = Util.CreateTwoDirs();
+
+            string s = "neichImSource.txt";
+            string t = "zvüImTarget.txt";
+            string srcFilename = Path.Combine(src, s);
+            string trgFilename = Path.Combine(trg, t);
+            File.WriteAllText(srcFilename, ".");
+            File.WriteAllText(trgFilename, ".");
+
+            IList<DiffData> r = RunCmp(src, trg);
+            Assert.AreEqual(2, r.Count);
+            Assert.AreEqual(s, r.First(i => i.state == DIFF_STATE.NEW)   .src.cFileName);
+            Assert.AreEqual(t, r.First(i => i.state == DIFF_STATE.DELETE).trg.cFileName);
+        }
         // --------------------------------------------------------------------
         IList<DiffData> RunCmp(string src, string trg)
         {
