@@ -116,8 +116,8 @@ namespace CmpTrees
 
                 DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters, collectNewAndDelFiles: true);
 
-                string src = Spi.Long.GetLongFilenameNotation(opts.sourceDir);
-                string trg = Spi.Long.GetLongFilenameNotation(opts.targetDir);
+                string src = Spi.Long.GetLongFilenameNotation(opts.sourceDir.TrimEnd('\\'));
+                string trg = Spi.Long.GetLongFilenameNotation(opts.targetDir.TrimEnd('\\'));
 
                 Console.Error.WriteLine($"source: {src}\ntarget: {trg}");
 

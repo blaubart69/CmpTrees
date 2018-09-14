@@ -151,7 +151,7 @@ namespace CmpTrees
             writer.WriteLine(
                 "{0}{1}{2}{3}{4}\t{5:X}"   // attributes             (human \t machine)
             + "\t{6}\t{7}\t{8}"            // create, access, modify (human)
-            + "\t{9:9}\t{10}"              // filesize, filename    
+            + "\t{9}\t{10}"              // filesize, filename    
             , (((attr & (uint)System.IO.FileAttributes.Archive)   != 0) ? 'A' : '-')
             , (((attr & (uint)System.IO.FileAttributes.System)    != 0) ? 'S' : '-')
             , (((attr & (uint)System.IO.FileAttributes.Hidden)    != 0) ? 'H' : '-')
