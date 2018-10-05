@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Spi;
 using Spi.Native;
 
@@ -52,7 +53,7 @@ namespace CmpTrees
         public static void Run(
             SortedList<Win32.FIND_DATA, List<string>> newFiles, 
             SortedList<Win32.FIND_DATA, List<string>> delFiles,
-            ConsoleAndFileWriter errWriter,
+            TextWriter errWriter,
             MoveFileHandler moveHandler)
         {
             Spi.Data.DiffSortedLists.Run(
@@ -78,7 +79,7 @@ namespace CmpTrees
                     moveHandler(newFile.Key.cFileName, delFile.Value[0], newFile.Value[0], newFile.Key.FileSize);
                 });
         }
-        private static bool FileAppearInMoreDirectories(Win32.FIND_DATA newFile, List<string> newDirs, Win32.FIND_DATA delFile, List<string> delDirs, ConsoleAndFileWriter errWriter)
+        private static bool FileAppearInMoreDirectories(Win32.FIND_DATA newFile, List<string> newDirs, Win32.FIND_DATA delFile, List<string> delDirs, TextWriter errWriter)
         {
             if ( newDirs.Count == 1 && delDirs.Count == 1 )
             {
@@ -90,7 +91,7 @@ namespace CmpTrees
 
             return true;
         }
-        private static void WriteErrorWhenFileIsInMoreThanOneDirectory(string filename, List<string> dirs, string side, ConsoleAndFileWriter errWriter)
+        private static void WriteErrorWhenFileIsInMoreThanOneDirectory(string filename, List<string> dirs, string side, TextWriter errWriter)
         {
             if (dirs.Count > 1)
             {
