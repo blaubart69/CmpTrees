@@ -19,6 +19,7 @@ namespace CmpTrees
         public long FilesDelBytes;
         public long DirsNew;
         public long DirsDel;
+        public long Errors;
     }
     class Opts
     {
@@ -32,7 +33,7 @@ namespace CmpTrees
     }
     class Program
     {
-        static readonly string ErrFilename = Path.Combine(Environment.GetEnvironmentVariable("temp"), "cmptrees.err.txt");
+        //static readonly string ErrFilename = Path.Combine(Environment.GetEnvironmentVariable("temp"), "cmptrees.err.txt");
         static int Main(string[] args)
         {
             Opts opts;
@@ -53,19 +54,17 @@ namespace CmpTrees
             try
             {
                 using (var CtrlCEvent = new CancellationTokenSource())
-                using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
+                using (var errWriter = TextWriter.Synchronized(
+                    new StreamWriter(@".\err.txt", append: false, encoding: System.Text.Encoding.UTF8)))
+                    //using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
+                    
                 {
                     StartBackgroudQuitPressedThread(CtrlCEvent);
                     RunCompare(opts, CtrlCEvent.Token, errWriter,
                         out SortedList<Win32.FIND_DATA, List<string>> newFiles,
                         out SortedList<Win32.FIND_DATA, List<string>> delFiles);
 
-                    RunMoveDetector(newFiles, delFiles, errWriter);
-
-                    if (errWriter.hasDataWritten())
-                    {
-                        Console.Error.WriteLine("\nerrors were logged to file [{0}]", ErrFilename);
-                    }
+                    RunMoveDetector(newFiles, delFiles);
                 }
             }
             catch (Exception ex)
@@ -78,9 +77,10 @@ namespace CmpTrees
             return 0;
         }
 
-        private static void RunMoveDetector(SortedList<Win32.FIND_DATA, List<string>> newFiles, SortedList<Win32.FIND_DATA, List<string>> delFiles, ConsoleAndFileWriter errWriter)
+        private static void RunMoveDetector(SortedList<Win32.FIND_DATA, List<string>> newFiles, SortedList<Win32.FIND_DATA, List<string>> delFiles)
         {
-            using (var writer = new StreamWriter(@".\moved.txt", append: false, encoding: Encoding.UTF8))
+            using (var writer    = new StreamWriter(@".\moved.txt",      append: false, encoding: Encoding.UTF8))
+            using (var errWriter = new StreamWriter(@".\movedErros.txt", append: false, encoding: Encoding.UTF8))
             {
                 Console.Error.Write("detecting possible moves...\r");
                 ulong possibleFileMoves = 0;
@@ -97,7 +97,7 @@ namespace CmpTrees
             }
         }
 
-        private static void RunCompare(Opts opts, CancellationToken CtrlCEvent, ConsoleAndFileWriter errWriter,
+        private static void RunCompare(Opts opts, CancellationToken CtrlCEvent, TextWriter errWriter,
             out SortedList<Win32.FIND_DATA, List<string>> newFiles,
             out SortedList<Win32.FIND_DATA, List<string>> delFiles)
         {
@@ -126,13 +126,18 @@ namespace CmpTrees
                     targetDir:       trg,
                     opts:            enumOpts,
                     diffHandler:     diffProcessor.DiffCallback,
-                    errorHandler:    (int RetCode, string Message) => errWriter.WriteLine($"E: rc={RetCode}\t{Message}"),
+                    errorHandler:    (int RetCode, string Message) =>
+                    {
+                        Interlocked.Increment(ref stats.Errors);
+                        errWriter.WriteLine($"E: rc={RetCode}\t{Message}");
+                    },
                     CtrlCEvent:      CtrlCEvent, 
                     maxThreadsToRun: opts.MaxThreads);
                 paraCmp.Start();
 
                 StatusLineWriter statWriter = new StatusLineWriter();
-                Misc.ExecUtilWaitHandleSet(paraCmp.Finished, 2000, () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
+                Misc.ExecUtilWaitHandleSet(paraCmp.Finished, 2000, 
+                    () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
 
                 IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataComparer_Name_Size_Modified();
@@ -152,7 +157,7 @@ namespace CmpTrees
             string privMem      = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
             string threadcount  = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
-            statWriter.Write($"dirs queued/running/done: {queued:N0}/{running}/{cmpsDone:N0}"
+            statWriter.Write($"dirs queued/running/done/errors: {queued:N0}/{running}/{cmpsDone:N0}/{stats.Errors:N0}"
                  + $" | new/mod/del: {stats.FilesNew:N0}/{stats.FilesMod:N0}/{stats.FilesDel:N0}"
                  + $" | GC/privMem/threads "
                      + Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))
