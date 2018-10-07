@@ -43,16 +43,16 @@ namespace CmpTrees
                 KeyComparer: (a,b) =>
                 {
                     int cmp = String.Compare(a.cFileName, b.cFileName, StringComparison.OrdinalIgnoreCase);
-                    if ( cmp != 0 )
+                    if (cmp == 0)
                     {
-                        return cmp;
-                    }
-                    bool aIsDir = Spi.Misc.IsDirectory(a.dwFileAttributes);
-                    bool bIsDir = Spi.Misc.IsDirectory(b.dwFileAttributes);
+                        bool aIsDir = Spi.Misc.IsDirectory(a.dwFileAttributes);
+                        bool bIsDir = Spi.Misc.IsDirectory(b.dwFileAttributes);
 
-                    return aIsDir == bIsDir 
-                                ?  0    // two directories OR two files --> same name --> return 0 
-                                : -1;   // one dir AND one file         --> same name --> return -1 to represent the difference
+                        cmp = (aIsDir == bIsDir)
+                            ?  0    // two directories OR two files --> same name --> return 0 
+                            : -1;   // one dir AND one file         --> same name --> return -1 to represent the difference
+                    }
+                    return cmp;
                 },
                 AttributeComparer: (a,b) =>
                 {
