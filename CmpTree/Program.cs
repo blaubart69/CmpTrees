@@ -60,11 +60,11 @@ namespace CmpTrees
                     
                 {
                     StartBackgroudQuitPressedThread(CtrlCEvent);
-                    RunCompare(opts, CtrlCEvent.Token, errWriter,
-                        out SortedList<Win32.FIND_DATA, List<string>> newFiles,
-                        out SortedList<Win32.FIND_DATA, List<string>> delFiles);
+                    RunCompare(opts, CtrlCEvent.Token, errWriter);
 
-                    RunMoveDetector(newFiles, delFiles);
+                   //IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataComparer_Name_Size_Modified();
+                   //RunMoveDetector(newFiles, delFiles);
+                   
                 }
             }
             catch (Exception ex)
@@ -97,9 +97,7 @@ namespace CmpTrees
             }
         }
 
-        private static void RunCompare(Opts opts, CancellationToken CtrlCEvent, TextWriter errWriter,
-            out SortedList<Win32.FIND_DATA, List<string>> newFiles,
-            out SortedList<Win32.FIND_DATA, List<string>> delFiles)
+        private static void RunCompare(Opts opts, CancellationToken CtrlCEvent, TextWriter errWriter)
         {
             DateTime start = DateTime.Now;
 
@@ -114,7 +112,7 @@ namespace CmpTrees
                     forceSortTarget = opts.forceSortTarget
                 };
 
-                DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters, collectNewAndDelFiles: true);
+                DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters);
 
                 string src = Spi.Long.GetLongFilenameNotation(opts.sourceDir.TrimEnd('\\'));
                 string trg = Spi.Long.GetLongFilenameNotation(opts.targetDir.TrimEnd('\\'));
@@ -139,10 +137,6 @@ namespace CmpTrees
                 Misc.ExecUtilWaitHandleSet(paraCmp.Finished, 2000, 
                     () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
-
-                IComparer<Win32.FIND_DATA> find_data_Comparer = new FindDataComparer_Name_Size_Modified();
-                newFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProcessor.newFilesDic, find_data_Comparer);
-                delFiles = new SortedList<Win32.FIND_DATA, List<string>>(diffProcessor.delFilesDic, find_data_Comparer);
             }
         }
         private static void WriteProgress(Stats stats, long queued, long running, long cmpsDone, StatusLineWriter statWriter)
@@ -154,14 +148,12 @@ namespace CmpTrees
             }
             catch { }
 
-            string privMem      = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
+            string virtMem      = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.VirtualMemorySize64);
             string threadcount  = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
             statWriter.Write($"dirs queued/running/done/errors: {queued:N0}/{running}/{cmpsDone:N0}/{stats.Errors:N0}"
                  + $" | new/mod/del: {stats.FilesNew:N0}/{stats.FilesMod:N0}/{stats.FilesDel:N0}"
-                 + $" | GC/privMem/threads "
-                     + Misc.GetPrettyFilesize(GC.GetTotalMemory(forceFullCollection: false))
-                     + $"/{privMem}/{threadcount}");
+                 + $" | virtMem {virtMem}");
         }
         private static void WriteStatistics(TimeSpan ProgramDuration, long comparesDone, Stats stats)
         {

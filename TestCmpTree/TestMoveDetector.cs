@@ -22,6 +22,7 @@ namespace TestnCmpTree
             this.to = to;
         }
     }
+    /*
     [TestClass]
     public class TestMoveDetector
     {
@@ -54,7 +55,7 @@ namespace TestnCmpTree
         private static List<MoveEntry> CalcMoves(string baseDir, string dira, string dirb)
         {
             bool err = false;
-            DiffProcessing diffProc = new DiffProcessing(new Stats(), new DiffWriter(baseDir), true);
+            DiffProcessing diffProc = new DiffProcessing(new Stats(), new DiffWriter(baseDir));
             var paraCmp = new CmpDirsParallel(dira, dirb, new EnumOptions(), diffProc.DiffCallback,
                 (rc, msg) => { err = true; }, new System.Threading.CancellationTokenSource().Token, 2);
             paraCmp.Start();
@@ -74,5 +75,5 @@ namespace TestnCmpTree
 
             return result;
         }
-    }
+    }*/
 }

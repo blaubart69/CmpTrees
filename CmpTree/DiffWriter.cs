@@ -29,8 +29,9 @@ namespace CmpTrees
             newWriter?.Close();
             modWriter?.Close();
             delWriter?.Close();
+
             newDirWriter?.Close();
-            delWriter?.Close();
+            delDirWriter?.Close();
         }
     }
 }
