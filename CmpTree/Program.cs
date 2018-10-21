@@ -148,12 +148,12 @@ namespace CmpTrees
             }
             catch { }
 
-            string virtMem      = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.VirtualMemorySize64);
+            string privMem      = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
             string threadcount  = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
             statWriter.Write($"dirs queued/running/done/errors: {queued:N0}/{running}/{cmpsDone:N0}/{stats.Errors:N0}"
                  + $" | new/mod/del: {stats.FilesNew:N0}/{stats.FilesMod:N0}/{stats.FilesDel:N0}"
-                 + $" | virtMem {virtMem}");
+                 + $" | privateMem: {privMem}");
         }
         private static void WriteStatistics(TimeSpan ProgramDuration, long comparesDone, Stats stats)
         {
