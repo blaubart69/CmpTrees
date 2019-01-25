@@ -33,6 +33,11 @@ namespace CmpTrees
             ProcessDiffState_UpdateCounters(state, ref find_data_src, ref find_data_trg, 
                 out toWriteTo, out File_Data_ToUse, out File_Data_NewDel);
 
+            if (toWriteTo == null)
+            {
+                return;
+            }
+
             string filenameToPrint = (state == DIFF_STATE.NEW) ? find_data_src.cFileName : find_data_trg.cFileName;
             string FullFilename = Path.Combine(basedir, filenameToPrint);
 
@@ -65,6 +70,18 @@ namespace CmpTrees
             {
                 default:
                     throw new Exception($"internal error. no such writer for this kind of state. [{state.ToString()}]");
+                case DIFF_STATE.SAMESAME:
+                    if (!Spi.Misc.IsDirectory(find_data_src))
+                    {
+                        Interlocked.Increment(ref _stats.FilesSame);
+                        Interlocked.Add(ref _stats.FilesSameBytes, (long)find_data_src.FileSize);
+                        toWriteTo = _writers.sameWriter;
+                    }
+                    else
+                    {
+                        toWriteTo = null;
+                    }
+                    break;
                 case DIFF_STATE.NEW:
                     if (Spi.Misc.IsDirectory(find_data_src))
                     {

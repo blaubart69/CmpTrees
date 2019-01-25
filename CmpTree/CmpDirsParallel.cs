@@ -110,10 +110,10 @@ namespace CmpTrees
                         executor.Enqueue(new ParallelCtx(Path.Combine(relativeDir.dirToSearchSinceRootDir, newDirToEnum), relativeDir.depth + 1));
                     }
 
-                    if (diffstate != DIFF_STATE.SAMESAME)
-                    {
+                    //if (diffstate != DIFF_STATE.SAMESAME)
+                    //{
                         _diffHandler(diffstate, relativeDir.dirToSearchSinceRootDir, ref find_data_src, ref find_data_trg);
-                    }
+                    //}
                 },
                 this._opts.forceSortSource,
                 this._opts.forceSortTarget,

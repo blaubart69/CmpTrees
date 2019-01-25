@@ -17,6 +17,8 @@ namespace CmpTrees
         public long FilesModBytes;
         public long FilesDel;
         public long FilesDelBytes;
+        public long FilesSame;
+        public long FilesSameBytes;
         public long DirsNew;
         public long DirsDel;
         public long Errors;
@@ -30,6 +32,7 @@ namespace CmpTrees
         public int MaxThreads = 32;
         public bool forceSortSource = false;
         public bool forceSortTarget = false;
+        public bool reportSameFile = false;
     }
     class Program
     {
@@ -152,7 +155,7 @@ namespace CmpTrees
             string threadcount  = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
             statWriter.Write($"dirs queued/running/done/errors: {queued:N0}/{running}/{cmpsDone:N0}/{stats.Errors:N0}"
-                 + $" | new/mod/del: {stats.FilesNew:N0}/{stats.FilesMod:N0}/{stats.FilesDel:N0}"
+                 + $" | new/mod/del/same: {stats.FilesNew:N0}/{stats.FilesMod:N0}/{stats.FilesDel:N0}/{stats.FilesSame:N0}"
                  + $" | privateMem: {privMem}");
         }
         private static void WriteStatistics(TimeSpan ProgramDuration, long comparesDone, Stats stats)
@@ -167,11 +170,12 @@ namespace CmpTrees
                     cmpsPerMilli * 1000 * 60 * 60);
             }
             Console.Out.WriteLine(
-              $"\n\nnew files\t{stats.FilesNew,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesNewBytes)}"
-              + $"\nmod files\t{stats.FilesMod,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesModBytes)}"
-              + $"\ndel files\t{stats.FilesDel,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesDelBytes)}"
-              + $"\nnew dirs \t{stats.DirsNew,12:N0}"
-              + $"\ndel dirs \t{stats.DirsDel,12:N0}");
+              $"\n\nnew  files\t{stats.FilesNew,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesNewBytes)}"
+              + $"\nmod  files\t{stats.FilesMod,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesModBytes)}"
+              + $"\ndel  files\t{stats.FilesDel,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesDelBytes)}"
+              + $"\nsame files\t{stats.FilesSame,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesSameBytes)}"
+              + $"\nnew  dirs \t{stats.DirsNew,12:N0}"
+              + $"\ndel  dirs \t{stats.DirsDel,12:N0}");
         }
         static void StartBackgroudQuitPressedThread(CancellationTokenSource CtrlC)
         {
@@ -212,11 +216,12 @@ namespace CmpTrees
             bool show_help = false;
             Opts opts = new Opts();
             var p = new Mono.Options.OptionSet() {
-                { "d|depth=",   "max depth to go down",                     v => opts.Depth = Convert.ToInt32(v)      },
-                { "j|follow",   "follow junctions",                         v => opts.FollowJunctions = (v != null)   },
-                { "t|threads=", "max enumeration threads parallel",         v => opts.MaxThreads = Convert.ToInt32(v) },
-                { "sorts",      "force sorting of entries on source side",  v => opts.forceSortSource = (v != null)        },
-                { "sortt",      "force sorting of entries on target side",  v => opts.forceSortTarget = (v != null)        },
+                { "d|depth=",   "max depth to go down",                     v => opts.Depth = Convert.ToInt32(v)        },
+                { "j|follow",   "follow junctions",                         v => opts.FollowJunctions = (v != null)     },
+                { "t|threads=", "max enumeration threads parallel",         v => opts.MaxThreads = Convert.ToInt32(v)   },
+                { "same",       "report equal files (same.txt)",            v => opts.reportSameFile = true             },
+                { "sorts",      "force sorting of entries on source side",  v => opts.forceSortSource = (v != null)     },
+                { "sortt",      "force sorting of entries on target side",  v => opts.forceSortTarget = (v != null)     },
                 { "h|help",     "show this message and exit",               v => show_help       = (v != null)        } };
 
             try
