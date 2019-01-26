@@ -14,17 +14,24 @@ namespace CmpTrees
     {
         public readonly Stats _stats;
         public readonly DiffWriter _writers;
+        public readonly bool _processSameSame;
 
-        public DiffProcessing(Stats stats, DiffWriter writers)
+        public DiffProcessing(Stats stats, DiffWriter writers, bool processSameSame)
         {
             _stats = stats;
             _writers = writers;
+            _processSameSame = processSameSame;
         }
         /// <summary>
         /// ATTENZIONE!!!! MULTI-THREADING AHEAD!!!
         /// </summary>
         public void DiffCallback(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_src, ref Win32.FIND_DATA find_data_trg)
         {
+            if (!_processSameSame && state == DIFF_STATE.SAMESAME)
+            {
+                return;
+            }
+
             Win32.FIND_DATA? File_Data_ToUse;
             Win32.FIND_DATA? File_Data_NewDel;
             //ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse;
@@ -63,7 +70,6 @@ namespace CmpTrees
             out TextWriter toWriteTo, 
             out Win32.FIND_DATA? File_Data_ToUse, out Win32.FIND_DATA? File_Data_NewDel)
         {
-            File_Data_ToUse = null;
             File_Data_NewDel = null;
 
             switch (state)
@@ -76,10 +82,12 @@ namespace CmpTrees
                         Interlocked.Increment(ref _stats.FilesSame);
                         Interlocked.Add(ref _stats.FilesSameBytes, (long)find_data_src.FileSize);
                         toWriteTo = _writers.sameWriter;
+                        File_Data_ToUse = find_data_src;
                     }
                     else
                     {
                         toWriteTo = null;
+                        File_Data_ToUse = null;
                     }
                     break;
                 case DIFF_STATE.NEW:
@@ -87,6 +95,7 @@ namespace CmpTrees
                     {
                         Interlocked.Increment(ref _stats.DirsNew);
                         toWriteTo = _writers.newDirWriter;
+                        File_Data_ToUse = null;
                     }
                     else
                     {
@@ -110,6 +119,7 @@ namespace CmpTrees
                     if (Spi.Misc.IsDirectory(find_data_trg))
                     {
                         toWriteTo = _writers.delDirWriter;
+                        File_Data_ToUse = null;
                         Interlocked.Increment(ref _stats.DirsDel);
                     }
                     else

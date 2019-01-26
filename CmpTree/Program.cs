@@ -115,7 +115,7 @@ namespace CmpTrees
                     forceSortTarget = opts.forceSortTarget
                 };
 
-                DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters);
+                DiffProcessing diffProcessor = new DiffProcessing(stats, diffWriters, opts.reportSameFile);
 
                 string src = Spi.Long.GetLongFilenameNotation(opts.sourceDir.TrimEnd('\\'));
                 string trg = Spi.Long.GetLongFilenameNotation(opts.targetDir.TrimEnd('\\'));
