@@ -40,7 +40,7 @@ namespace CmpTrees
         static int Main(string[] args)
         {
             Opts opts;
-            if ((opts = GetOpts(args)) == null)
+            if ((opts = GetOpts.Parse(args)) == null)
             {
                 return 8;
             }
@@ -57,10 +57,7 @@ namespace CmpTrees
             try
             {
                 using (var CtrlCEvent = new CancellationTokenSource())
-                using (var errWriter = TextWriter.Synchronized(
-                    new StreamWriter(@".\err.txt", append: false, encoding: System.Text.Encoding.UTF8)))
-                    //using (var errWriter = new ConsoleAndFileWriter(Console.Error, ErrFilename))
-                    
+                using (var errWriter = TextWriter.Synchronized(new StreamWriter(@".\err.txt", append: false, encoding: System.Text.Encoding.UTF8)))
                 {
                     StartBackgroudQuitPressedThread(CtrlCEvent);
                     RunCompare(opts, CtrlCEvent.Token, errWriter);
@@ -202,64 +199,6 @@ namespace CmpTrees
                     }
                     ));
 
-        }
-        static void ShowHelp(Mono.Options.OptionSet p)
-        {
-            Console.WriteLine("Usage: CmpTrees [OPTIONS] {source dir} {target dir}");
-            Console.WriteLine("compare source with target and writes out the differences");
-            Console.WriteLine();
-            Console.WriteLine("Options:");
-            p.WriteOptionDescriptions(Console.Out);
-        }
-        static Opts GetOpts(string[] args)
-        {
-            bool show_help = false;
-            Opts opts = new Opts();
-            var p = new Mono.Options.OptionSet() {
-                { "d|depth=",   "max depth to go down",                     v => opts.Depth = Convert.ToInt32(v)        },
-                { "j|follow",   "follow junctions",                         v => opts.FollowJunctions = (v != null)     },
-                { "t|threads=", "max enumeration threads parallel",         v => opts.MaxThreads = Convert.ToInt32(v)   },
-                { "same",       "report equal files (same.txt)",            v => opts.reportSameFile = true             },
-                { "sorts",      "force sorting of entries on source side",  v => opts.forceSortSource = (v != null)     },
-                { "sortt",      "force sorting of entries on target side",  v => opts.forceSortTarget = (v != null)     },
-                { "h|help",     "show this message and exit",               v => show_help       = (v != null)        } };
-
-            try
-            {
-                List<string> dirs = p.Parse(args);
-                if ( dirs.Count != 2)
-                {
-                    Console.Error.WriteLine("no two dir's given");
-                    opts = null;
-                    show_help = true;
-                }
-                else
-                {
-                    opts.sourceDir = dirs[0];
-                    opts.targetDir = dirs[1];
-                }
-
-                if (opts != null && opts.forceSortSource)
-                {
-                    Console.Error.WriteLine("will sort items in source dir");
-                }
-                if (opts != null && opts.forceSortTarget)
-                {
-                    Console.Error.WriteLine("will sort items in target dir");
-                }
-
-            }
-            catch (Mono.Options.OptionException oex)
-            {
-                Console.WriteLine(oex.Message);
-                opts = null;
-            }
-            if (show_help)
-            {
-                ShowHelp(p);
-                opts = null;
-            }
-            return opts;
         }
     }
 }
