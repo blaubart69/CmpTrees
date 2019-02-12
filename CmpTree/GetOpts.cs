@@ -13,16 +13,19 @@ namespace CmpTrees
 
             bool showHelp = false;
             IList<BeeOpts> CommandLineOpts = new BeeOptsBuilder()
-                .Add('d',  "depth",   OPTTYPE.VALUE, "max depth to go down", v => opts.Depth = Convert.ToInt32(v))
-                .Add('j',  "follow",  OPTTYPE.BOOL,  "follow junctions", v => opts.FollowJunctions = (v != null))
-                .Add('t',  "threads", OPTTYPE.VALUE, "max enumeration threads parallel", v => opts.MaxThreads = Convert.ToInt32(v))
-                .Add('s',  "same",    OPTTYPE.BOOL,  "report equal files (same.txt)", v => opts.reportSameFile = true)
+                .Add('d',  "depth",   OPTTYPE.VALUE, "max depth to go down",                    v => opts.Depth = Convert.ToInt32(v))
+                .Add('j',  "follow",  OPTTYPE.BOOL,  "follow junctions",                        v => opts.FollowJunctions = (v != null))
+                .Add('t',  "threads", OPTTYPE.VALUE, "max enumeration threads parallel",        v => opts.MaxThreads = Convert.ToInt32(v))
+                .Add('s',  "same",    OPTTYPE.BOOL,  "report equal files (same.txt)",           v => opts.reportSameFile = true)
                 .Add(null, "sorts",   OPTTYPE.BOOL,  "force sorting of entries on source side", v => opts.forceSortSource = true )
                 .Add(null, "sortt",   OPTTYPE.BOOL,  "force sorting of entries on target side", v => opts.forceSortTarget = true)
-                .Add('h',  "help",    OPTTYPE.BOOL,  "show this help", v => showHelp = true)
+                .Add('h',  "help",    OPTTYPE.BOOL,  "show this help",                          v => showHelp = true)
                 .GetOpts();
 
-            IList<string> dirs = BeeOpts.Parse(args, CommandLineOpts, (optname) => Console.Error.WriteLine($"unknow option: [{optname}]"));
+            IList<string> dirs = BeeOpts.Parse(
+                args, 
+                CommandLineOpts, 
+                OnUnknown: (optname) => Console.Error.WriteLine($"unknow option: [{optname}]"));
 
             if (showHelp)
             {
