@@ -1,12 +1,10 @@
-﻿using Spi.Data;
+﻿using Spi;
+using Spi.Data;
 using Spi.Native;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Threading;
-using Spi;
 using System.Runtime.InteropServices.ComTypes;
-using System.Collections.Concurrent;
+using System.Threading;
 
 namespace CmpTrees
 {
@@ -34,7 +32,6 @@ namespace CmpTrees
 
             Win32.FIND_DATA? File_Data_ToUse;
             Win32.FIND_DATA? File_Data_NewDel;
-            //ConcurrentDictionary<Win32.FIND_DATA, List<string>> DicToUse;
             TextWriter toWriteTo;
 
             ProcessDiffState_UpdateCounters(state, ref find_data_src, ref find_data_trg, 

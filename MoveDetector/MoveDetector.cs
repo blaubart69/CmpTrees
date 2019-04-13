@@ -4,7 +4,7 @@ using System.IO;
 using Spi;
 using Spi.Native;
 
-namespace CmpTrees
+namespace MoveDetector
 {
     public delegate void MoveFileHandler(string Filename, string MoveFromPath, string MoveToPath, ulong Filesize);
 

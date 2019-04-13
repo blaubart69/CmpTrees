@@ -4,14 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{36C920CD-5B5D-4163-941B-3EE930C8518F}</ProjectGuid>
+    <ProjectGuid>{001BA66A-B7E3-4D58-B872-E2B5C786BED0}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>CmpTrees</RootNamespace>
-    <AssemblyName>CmpTrees</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <RootNamespace>MoveDetector</RootNamespace>
+    <AssemblyName>MoveDetector</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <TargetFrameworkProfile />
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -22,8 +22,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -33,38 +31,24 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
-    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CmpDirs.cs" />
-    <Compile Include="CmpDirsParallel.cs" />
-    <Compile Include="DiffProcessing.cs" />
-    <Compile Include="DiffWriter.cs" />
-    <Compile Include="EnumDir.cs" />
-    <Compile Include="GetOpts.cs" />
-    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="MoveDetector.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Spi\BeeOptLong.cs" />
-    <Compile Include="Spi\ConsoleAndFileWriter.cs" />
-    <Compile Include="Spi\Data\Delta.cs" />
-    <Compile Include="Spi\ListExtension.cs" />
-    <Compile Include="Spi\Long.cs" />
-    <Compile Include="Spi\Misc.cs" />
-    <Compile Include="Spi\Native\Privilegien.cs" />
-    <Compile Include="Spi\Native\SafeFindHandle.cs" />
-    <Compile Include="Spi\Native\Win32.cs" />
-    <Compile Include="Spi\ParallelExecutor.cs" />
-    <Compile Include="Spi\StatusLineWriter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\CmpTree\CmpTrees.csproj">
+      <Project>{36c920cd-5b5d-4163-941b-3ee930c8518f}</Project>
+      <Name>CmpTrees</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
