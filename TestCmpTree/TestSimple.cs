@@ -58,10 +58,10 @@ namespace TestnCmpTree
             Assert.AreEqual(2, result.Count);
 
             var SrcDelDir = result.First(r => r.state == DIFF_STATE.NEW);
-            Assert.IsTrue(SrcDelDir.src.cFileName.Equals("x")  &&  Misc.IsDirectory(SrcDelDir.src.dwFileAttributes) );
+            Assert.IsTrue(SrcDelDir.src.cFileName.Equals("x")  && Spi.Misc.IsDirectory(SrcDelDir.src.dwFileAttributes) );
 
             var TrgAddFile = result.First(r => r.state == DIFF_STATE.DELETE);
-            Assert.IsTrue(TrgAddFile.trg.cFileName.Equals("x") && !Misc.IsDirectory(TrgAddFile.trg.dwFileAttributes));
+            Assert.IsTrue(TrgAddFile.trg.cFileName.Equals("x") && !Spi.Misc.IsDirectory(TrgAddFile.trg.dwFileAttributes));
 
         }
         [TestMethod]

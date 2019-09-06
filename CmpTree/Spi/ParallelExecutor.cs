@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Spi
 {
-    public class ParallelExecutor<T, C, TL> where T : class
+    public class ParallelExecutor<T, C, TL> : IDisposable where T : class
     {
         public delegate void WorkFunc(T item, ParallelExecutor<T, C, TL> executor, C context, ref TL threadLocalObject);
 
@@ -41,6 +41,11 @@ namespace Spi
 
             StartWorkerThreads(maxThreads);
         }
+        public void Dispose()
+        {
+            _finished?.Dispose();
+        }
+
         public bool Wait(int milliSeconds)
         {
             return _finished.WaitOne(milliSeconds);
@@ -110,5 +115,6 @@ namespace Spi
                 _queue.Add(default);
             }
         }
+
     }
 }

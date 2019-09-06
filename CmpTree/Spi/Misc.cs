@@ -35,13 +35,22 @@ namespace Spi
         }
         public static string GetPrettyFilesize(ulong Filesize)
         {
-            StringBuilder sb = new StringBuilder(50);
-            Spi.Native.Win32.StrFormatByteSize((long)Filesize, sb, 50);
+            const int MaxLen = 32;
+            StringBuilder sb = new StringBuilder(MaxLen);
+            Spi.Native.Win32.StrFormatByteSize((long)Filesize, sb, MaxLen);
             return sb.ToString();
         }
         public static string GetPrettyFilesize(long Filesize)
         {
-            return GetPrettyFilesize((ulong)Filesize);
+            if (Filesize >= 0)
+            {
+                return GetPrettyFilesize((ulong)Filesize);
+            }
+            else
+            {
+                long positiveSize = -Filesize;
+                return "-" + GetPrettyFilesize((ulong)positiveSize);
+            }
         }
         public static string FiletimeToString(FILETIME filetime)
         {

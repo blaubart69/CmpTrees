@@ -54,6 +54,7 @@
     <Compile Include="TestSimple.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestMoveDetector.cs" />
+    <Compile Include="Misc.cs" />
     <Compile Include="Util.cs" />
   </ItemGroup>
   <ItemGroup>
