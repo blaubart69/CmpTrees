@@ -12,30 +12,30 @@ namespace CmpTrees
     {
         public readonly Stats _stats;
         public readonly DiffWriter _writers;
-        public readonly bool _processSameSame;
+        public readonly bool _writeSameSame;
 
-        public DiffProcessing(Stats stats, DiffWriter writers, bool processSameSame)
+        public DiffProcessing(Stats stats, DiffWriter writers, bool writeSameSame)
         {
             _stats = stats;
             _writers = writers;
-            _processSameSame = processSameSame;
+            _writeSameSame = writeSameSame;
         }
         /// <summary>
-        /// ATTENZIONE!!!! MULTI-THREADING AHEAD!!!
+        /// ATTENZIONE!!!! --- DANGER-ZONE --- MULTI-THREADING AHEAD!!!
         /// </summary>
         public void DiffCallback(DIFF_STATE state, string basedir, ref Win32.FIND_DATA find_data_src, ref Win32.FIND_DATA find_data_trg)
         {
-            if (!_processSameSame && state == DIFF_STATE.SAMESAME)
-            {
-                return;
-            }
-
             Win32.FIND_DATA? File_Data_ToUse;
             Win32.FIND_DATA? File_Data_NewDel;
             TextWriter toWriteTo;
 
             ProcessDiffState_UpdateCounters(state, ref find_data_src, ref find_data_trg, 
                 out toWriteTo, out File_Data_ToUse, out File_Data_NewDel);
+
+            if (!_writeSameSame && state == DIFF_STATE.SAMESAME)
+            {
+                return;
+            }
 
             if (toWriteTo == null)
             {
