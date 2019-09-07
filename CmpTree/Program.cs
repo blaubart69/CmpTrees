@@ -112,8 +112,12 @@ namespace CmpTrees
                 paraCmp.Start();
 
                 StatusLineWriter statWriter = new StatusLineWriter();
-                Misc.ExecUtilWaitHandleSet(paraCmp.Finished, 2000, 
-                    () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
+                using (Process currProc = System.Diagnostics.Process.GetCurrentProcess())
+                {
+                    Misc.ExecUtilWaitHandleSet(paraCmp.Finished, 2000,
+                        () => WriteProgress(stats, currProc, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
+                }
+
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
                 if ( stats.Errors > 0 )
                 {
@@ -121,17 +125,12 @@ namespace CmpTrees
                 }
             }
         }
-        private static void WriteProgress(Stats stats, long queued, long running, long cmpsDone, StatusLineWriter statWriter)
+        private static void WriteProgress(Stats stats, Process currProc, long queued, long running, long cmpsDone, StatusLineWriter statWriter)
         {
-            Process currProc = null;
-            try
-            {
-                currProc = System.Diagnostics.Process.GetCurrentProcess();
-            }
-            catch { }
+            currProc.Refresh();
 
             string privMem      = currProc == null ? "n/a" : Misc.GetPrettyFilesize(currProc.PrivateMemorySize64);
-            string threadcount  = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
+            //string threadcount  = currProc == null ? "n/a" : currProc.Threads.Count.ToString();
 
             statWriter.Write($"dirs queued/running/done/errors: {queued:N0}/{running}/{cmpsDone:N0}/{stats.Errors:N0}"
                  + $" | new/mod/del/same: {stats.FilesNew:N0}/{stats.FilesMod:N0}/{stats.FilesDel:N0}/{stats.FilesSame:N0}"
@@ -149,12 +148,12 @@ namespace CmpTrees
                     cmpsPerMilli * 1000 * 60 * 60);
             }
             Console.Out.WriteLine(
-              $"\n\nnew  files\t{stats.FilesNew,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesNewBytes)}"
-              + $"\nmod  files\t{stats.FilesMod,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesModBytes)}"
-              + $"\ndel  files\t{stats.FilesDel,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesDelBytes)}"
+              $"\n\nnew  files\t{stats.FilesNew, 12:N0}\t{Misc.GetPrettyFilesize(stats.FilesNewBytes)}"
+              + $"\nmod  files\t{stats.FilesMod, 12:N0}\t{Misc.GetPrettyFilesize(stats.FilesModBytes)}"
+              + $"\ndel  files\t{stats.FilesDel, 12:N0}\t{Misc.GetPrettyFilesize(stats.FilesDelBytes)}"
               + $"\nsame files\t{stats.FilesSame,12:N0}\t{Misc.GetPrettyFilesize(stats.FilesSameBytes)}"
-              + $"\nnew  dirs \t{stats.DirsNew,12:N0}"
-              + $"\ndel  dirs \t{stats.DirsDel,12:N0}");
+              + $"\nnew  dirs \t{stats.DirsNew,  12:N0}"
+              + $"\ndel  dirs \t{stats.DirsDel,  12:N0}");
         }
         static void StartBackgroudQuitPressedThread(CancellationTokenSource CtrlC)
         {
