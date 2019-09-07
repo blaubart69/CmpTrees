@@ -78,7 +78,7 @@ namespace CmpTrees
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex.Message);
-                Console.Error.WriteLine("HINT: try using --sorts/--sortt to get the directories sorted for comparing.");
+                errorHandler(999, ex.Message + "\nHINT: try using --sorts/--sortt to get the directories sorted for comparing.");
             }
         }
         public static long CmpFileTimes(System.Runtime.InteropServices.ComTypes.FILETIME a, System.Runtime.InteropServices.ComTypes.FILETIME b)

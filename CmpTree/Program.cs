@@ -33,6 +33,7 @@ namespace CmpTrees
         public bool forceSortSource = false;
         public bool forceSortTarget = false;
         public bool reportSameFile = false;
+        public string errorFilename = @".\err.txt";
     }
     class Program
     {
@@ -57,7 +58,7 @@ namespace CmpTrees
             try
             {
                 using (var CtrlCEvent = new CancellationTokenSource())
-                using (var errWriter = TextWriter.Synchronized(new StreamWriter(@".\err.txt", append: false, encoding: System.Text.Encoding.UTF8)))
+                using (var errWriter = TextWriter.Synchronized(new StreamWriter(opts.errorFilename, append: false, encoding: System.Text.Encoding.UTF8)))
                 {
                     StartBackgroudQuitPressedThread(CtrlCEvent);
                     RunCompare(opts, CtrlCEvent.Token, errWriter);
@@ -114,6 +115,10 @@ namespace CmpTrees
                 Misc.ExecUtilWaitHandleSet(paraCmp.Finished, 2000, 
                     () => WriteProgress(stats, paraCmp.Queued, paraCmp.Running, paraCmp.Done, statWriter));
                 WriteStatistics(new TimeSpan(DateTime.Now.Ticks - start.Ticks), paraCmp.Done, stats);
+                if ( stats.Errors > 0 )
+                {
+                    Console.Error.WriteLine($"{stats.Errors} erros occoured. please see file {opts.errorFilename}.");
+                }
             }
         }
         private static void WriteProgress(Stats stats, long queued, long running, long cmpsDone, StatusLineWriter statWriter)
